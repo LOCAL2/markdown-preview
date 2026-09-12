@@ -49,7 +49,8 @@ import {
   Info,
   HelpCircle,
   FileCode,
-  FileDown
+  FileDown,
+  Layers
 } from "lucide-react";
 
 import { SAMPLE_TEMPLATES } from "./templates";
