@@ -72,10 +72,12 @@ export default function MarkdownPreviewer() {
   const [copiedHtml, setCopiedHtml] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showTemplatesDropdown, setShowTemplatesDropdown] = useState(false);
+  const [showCalloutDropdown, setShowCalloutDropdown] = useState(false);
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [isSyncScroll, setIsSyncScroll] = useState<boolean>(true);
   const [splitWidth, setSplitWidth] = useState<number>(50); // percentage 20%-80%
   const isResizing = useRef<boolean>(false);
+  const calloutRef = useRef<HTMLDivElement>(null);
 
   // Auto-Save & Draft History state
   const [autoSaveStatus, setAutoSaveStatus] = useState<"Saved" | "Saving..." | "Unsaved">("Saved");
@@ -230,6 +232,9 @@ export default function MarkdownPreviewer() {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setShowTemplatesDropdown(false);
+      }
+      if (calloutRef.current && !calloutRef.current.contains(event.target as Node)) {
+        setShowCalloutDropdown(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -899,13 +904,46 @@ ${previewRef.current.innerHTML}
                 >
                   <Quote className="w-4 h-4" />
                 </button>
-                <button
-                  onClick={() => insertFormat("> [!NOTE]\n> ", "", "Important alert message")}
-                  className={`p-1.5 rounded-md transition-all ${isDark ? "hover:bg-slate-800 text-indigo-400" : "hover:bg-slate-200 text-indigo-600"}`}
-                  title="Insert GitHub Callout Alert"
-                >
-                  <AlertCircle className="w-4 h-4" />
-                </button>
+                {/* Callout / Alert Dropdown */}
+                <div className="relative" ref={calloutRef}>
+                  <button
+                    onClick={() => setShowCalloutDropdown(!showCalloutDropdown)}
+                    className={`p-1.5 rounded-md transition-all ${isDark ? "hover:bg-slate-800 text-indigo-400" : "hover:bg-slate-200 text-indigo-600"}`}
+                    title="Insert GitHub Callout Alert (NOTE, TIP, IMPORTANT, WARNING, CAUTION)"
+                  >
+                    <AlertCircle className="w-4 h-4" />
+                  </button>
+
+                  {showCalloutDropdown && (
+                    <div
+                      className={`absolute left-0 mt-1 w-44 rounded-xl border shadow-2xl py-1 z-50 animate-in fade-in zoom-in-95 text-xs font-mono ${
+                        isDark ? "bg-[#0f172a] border-slate-700 text-slate-100" : "bg-white border-slate-200 text-slate-900"
+                      }`}
+                    >
+                      {[
+                        { type: "NOTE", label: "Note", color: "text-blue-400" },
+                        { type: "TIP", label: "Tip", color: "text-emerald-400" },
+                        { type: "IMPORTANT", label: "Important", color: "text-purple-400" },
+                        { type: "WARNING", label: "Warning", color: "text-amber-400" },
+                        { type: "CAUTION", label: "Caution", color: "text-rose-400" },
+                      ].map((item) => (
+                        <button
+                          key={item.type}
+                          onClick={() => {
+                            insertFormat(`> [!${item.type}]\n> `, "", `${item.type.toLowerCase()} message`);
+                            setShowCalloutDropdown(false);
+                          }}
+                          className={`w-full text-left px-3 py-1.5 font-bold flex items-center justify-between transition-colors ${
+                            isDark ? "hover:bg-slate-800" : "hover:bg-slate-100"
+                          } ${item.color}`}
+                        >
+                          <span>[!{item.type}]</span>
+                          <span className="text-[10px] text-slate-400 font-normal font-sans">{item.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <button
                   onClick={() => insertFormat("$\n", "\n$", "E = mc^2")}
                   className={`p-1.5 rounded-md transition-all ${isDark ? "hover:bg-slate-800 text-emerald-400" : "hover:bg-slate-200 text-emerald-600"}`}
