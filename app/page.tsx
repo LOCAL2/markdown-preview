@@ -54,7 +54,97 @@ import {
 } from "lucide-react";
 
 import { SAMPLE_TEMPLATES } from "./templates";
-import MermaidRenderer from "./components/MermaidRenderer";
+const CALLOUT_CONFIG: Record<
+  string,
+  { bg: string; border: string; text: string; title: string }
+> = {
+  note: {
+    bg: "bg-blue-500/10",
+    border: "border-blue-500",
+    text: "text-blue-200",
+    title: "text-blue-400",
+  },
+  tip: {
+    bg: "bg-emerald-500/10",
+    border: "border-emerald-500",
+    text: "text-emerald-200",
+    title: "text-emerald-400",
+  },
+  important: {
+    bg: "bg-purple-500/10",
+    border: "border-purple-500",
+    text: "text-purple-200",
+    title: "text-purple-400",
+  },
+  warning: {
+    bg: "bg-amber-500/10",
+    border: "border-amber-500",
+    text: "text-amber-200",
+    title: "text-amber-400",
+  },
+  caution: {
+    bg: "bg-rose-500/10",
+    border: "border-rose-500",
+    text: "text-rose-200",
+    title: "text-rose-400",
+  },
+};
+
+function renderCalloutAlert(alertType: string, content: React.ReactNode) {
+  const config = CALLOUT_CONFIG[alertType] || CALLOUT_CONFIG.note;
+
+  return (
+    <div
+      className={`my-4 p-4 border-l-4 rounded-r-xl shadow-md font-sans text-sm ${config.bg} ${config.border} ${config.text}`}
+    >
+      <div className={`font-bold text-xs uppercase flex items-center gap-1.5 mb-1.5 ${config.title}`}>
+        <AlertCircle className="w-4 h-4 shrink-0" />
+        <span>{alertType}</span>
+      </div>
+      <div className="font-normal leading-relaxed">{content}</div>
+    </div>
+  );
+}
+
+function processCalloutChildren(children: React.ReactNode): { alertType: string | null; cleanContent: React.ReactNode } {
+  let alertType: string | null = null;
+  let cleanContent = children;
+
+  const extractString = (node: any): string => {
+    if (!node) return "";
+    if (typeof node === "string") return node;
+    if (Array.isArray(node)) return node.map(extractString).join("");
+    if (node && node.props && node.props.children) return extractString(node.props.children);
+    return "";
+  };
+
+  const fullText = extractString(children).trim();
+  const match = fullText.match(/^\[\!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*/i);
+
+  if (match) {
+    alertType = match[1].toLowerCase();
+
+    const stripPrefix = (node: any): any => {
+      if (typeof node === "string") {
+        return node.replace(/^\[\!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*/i, "");
+      }
+      if (Array.isArray(node) && node.length > 0) {
+        return [stripPrefix(node[0]), ...node.slice(1)];
+      }
+      if (node && node.props && node.props.children) {
+        return React.cloneElement(node, {
+          ...node.props,
+          children: stripPrefix(node.props.children),
+        });
+      }
+      return node;
+    };
+
+    cleanContent = stripPrefix(children);
+  }
+
+  return { alertType, cleanContent };
+}
 
 type ViewMode = "split" | "editor" | "preview";
 
@@ -1118,42 +1208,18 @@ ${previewRef.current.innerHTML}
                         </code>
                       );
                     },
-                    blockquote({ children, ...props }: any) {
-                      // Detect GitHub Callout Alerts (> [!NOTE], > [!TIP], > [!IMPORTANT], > [!WARNING], > [!CAUTION])
-                      let alertType: string | null = null;
-                      let cleanChildren = children;
-
-                      const childrenArray = React.Children.toArray(children);
-                      if (childrenArray.length > 0) {
-                        const firstChild: any = childrenArray[0];
-                        if (firstChild && firstChild.props && firstChild.props.children) {
-                          const innerArray = React.Children.toArray(firstChild.props.children);
-                          if (innerArray.length > 0) {
-                            const firstText = String(innerArray[0]);
-                            const match = firstText.match(/^\[\!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*/i);
-                            if (match) {
-                              alertType = match[1].toLowerCase();
-                              const strippedText = firstText.replace(/^\[\!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*/i, "");
-                              const newInner = [strippedText, ...innerArray.slice(1)];
-                              const newFirstChild = React.cloneElement(firstChild, { ...firstChild.props, children: newInner });
-                              cleanChildren = [newFirstChild, ...childrenArray.slice(1)];
-                            }
-                          }
-                        }
-                      }
-
+                    p({ children, ...props }: any) {
+                      const { alertType, cleanContent } = processCalloutChildren(children);
                       if (alertType) {
-                        return (
-                          <blockquote className={`markdown-alert markdown-alert-${alertType}`} {...props}>
-                            <div className="markdown-alert-title font-bold text-xs uppercase flex items-center gap-1.5 mb-1">
-                              <AlertCircle className="w-4 h-4 shrink-0" />
-                              <span>{alertType}</span>
-                            </div>
-                            <div className="markdown-alert-content font-normal not-italic">{cleanChildren}</div>
-                          </blockquote>
-                        );
+                        return renderCalloutAlert(alertType, cleanContent);
                       }
-
+                      return <p {...props}>{children}</p>;
+                    },
+                    blockquote({ children, ...props }: any) {
+                      const { alertType, cleanContent } = processCalloutChildren(children);
+                      if (alertType) {
+                        return renderCalloutAlert(alertType, cleanContent);
+                      }
                       return <blockquote {...props}>{children}</blockquote>;
                     },
                   }}
