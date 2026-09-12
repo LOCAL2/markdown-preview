@@ -840,7 +840,7 @@ ${previewRef.current.innerHTML}
 
             {/* Pro Formatting Toolbar */}
             <div
-              className={`flex items-center justify-between px-5 h-[41px] border-b overflow-x-auto transition-colors duration-300 ${
+              className={`flex items-center justify-between px-5 h-[41px] border-b relative z-20 transition-colors duration-300 ${
                 isDark ? "bg-[#0e1626]/90 border-slate-800/70" : "bg-slate-100/90 border-slate-200"
               }`}
             >
@@ -929,8 +929,8 @@ ${previewRef.current.innerHTML}
 
                   {showCalloutDropdown && (
                     <div
-                      className={`absolute left-0 mt-1 w-44 rounded-xl border shadow-2xl py-1 z-50 animate-in fade-in zoom-in-95 text-xs font-mono ${
-                        isDark ? "bg-[#0f172a] border-slate-700 text-slate-100" : "bg-white border-slate-200 text-slate-900"
+                      className={`absolute left-0 top-full mt-1.5 w-44 rounded-xl border shadow-2xl py-1.5 z-50 animate-in fade-in zoom-in-95 text-xs font-mono ${
+                        isDark ? "bg-[#0f172a] border-slate-700 text-slate-100 shadow-black/80" : "bg-white border-slate-200 text-slate-900 shadow-slate-400/50"
                       }`}
                     >
                       {[
