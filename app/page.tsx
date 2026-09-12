@@ -559,11 +559,20 @@ ${previewRef.current.innerHTML}
         isDark ? "bg-[#0b0f17] text-slate-100" : "bg-slate-50 text-slate-900"
       }`}
     >
-      {/* Toast Banner */}
+      {/* Modern Glassmorphic Toast Notification */}
       {toastMessage && (
-        <div className="fixed top-16 right-6 z-50 px-4 py-2.5 rounded-xl bg-cyan-600 text-white font-medium text-xs shadow-2xl animate-in fade-in slide-in-from-top-4 flex items-center gap-2">
-          <Sparkles className="w-4 h-4" />
-          {toastMessage}
+        <div className="fixed bottom-10 right-6 z-50 px-4 py-3 rounded-2xl bg-[#0f172a]/95 border border-slate-700/70 text-slate-100 font-sans text-xs shadow-2xl backdrop-blur-md animate-in fade-in slide-in-from-bottom-4 flex items-center gap-3 max-w-md">
+          <div className="p-1.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
+            <Check className="w-3.5 h-3.5" />
+          </div>
+          <span className="font-medium text-slate-200 truncate flex-1">{toastMessage}</span>
+          <button
+            onClick={() => setToastMessage(null)}
+            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors shrink-0"
+            title="Dismiss"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
         </div>
       )}
 
