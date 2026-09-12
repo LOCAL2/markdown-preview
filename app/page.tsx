@@ -128,13 +128,23 @@ function processCalloutChildren(children: React.ReactNode): { alertType: string 
       if (typeof node === "string") {
         return node.replace(/^\[\!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*/i, "");
       }
-      if (Array.isArray(node) && node.length > 0) {
-        return [stripPrefix(node[0]), ...node.slice(1)];
+      if (Array.isArray(node)) {
+        let prefixStripped = false;
+        return node.map((child) => {
+          if (!prefixStripped) {
+            const childStr = extractString(child);
+            if (childStr.match(/^\[\!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]/i)) {
+              prefixStripped = true;
+              return stripPrefix(child);
+            }
+          }
+          return child;
+        });
       }
-      if (node && node.props && node.props.children) {
+      if (node && React.isValidElement(node) && (node.props as any)?.children) {
         return React.cloneElement(node, {
-          ...node.props,
-          children: stripPrefix(node.props.children),
+          ...(node.props as any),
+          children: stripPrefix((node.props as any).children),
         });
       }
       return node;
@@ -1197,6 +1207,10 @@ ${previewRef.current.innerHTML}
                   remarkPlugins={[remarkGfm, remarkMath]}
                   rehypePlugins={[rehypeHighlight, rehypeKatex]}
                   components={{
+                    img({ node, src, alt, ...props }: any) {
+                      if (!src) return null;
+                      return <img src={src} alt={alt || ""} {...props} />;
+                    },
                     code({ node, inline, className, children, ...props }: any) {
                       const match = /language-(\w+)/.exec(className || "");
                       if (!inline && match && match[1] === "mermaid") {
