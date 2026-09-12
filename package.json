@@ -6,17 +6,23 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "npx tsx scripts/test-all-features.ts"
   },
   "dependencies": {
+    "@types/katex": "^0.16.8",
     "highlight.js": "^11.12.0",
+    "katex": "^0.18.7",
     "lucide-react": "^1.45.0",
+    "mermaid": "^12.0.0",
     "next": "16.3.5",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "react-markdown": "^10.1.0",
     "rehype-highlight": "^7.0.2",
-    "remark-gfm": "^4.0.1"
+    "rehype-katex": "^7.0.1",
+    "remark-gfm": "^4.0.1",
+    "remark-math": "^6.0.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

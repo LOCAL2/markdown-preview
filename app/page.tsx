@@ -1,9 +1,13 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
 import rehypeHighlight from "rehype-highlight";
+import rehypeKatex from "rehype-katex";
+
 import {
   Bold,
   Italic,
@@ -38,11 +42,27 @@ import {
   Image as ImageIcon,
   ExternalLink,
   X,
-  Upload
+  Upload,
+  History,
+  Save,
+  AlertCircle,
+  Info,
+  HelpCircle,
+  FileCode,
+  FileDown
 } from "lucide-react";
+
 import { SAMPLE_TEMPLATES } from "./templates";
+import MermaidRenderer from "./components/MermaidRenderer";
 
 type ViewMode = "split" | "editor" | "preview";
+
+interface DraftSnapshot {
+  id: string;
+  timestamp: string;
+  previewText: string;
+  fullText: string;
+}
 
 export default function MarkdownPreviewer() {
   const [markdown, setMarkdown] = useState<string>("");
@@ -56,12 +76,43 @@ export default function MarkdownPreviewer() {
   const [splitWidth, setSplitWidth] = useState<number>(50); // percentage 20%-80%
   const isResizing = useRef<boolean>(false);
 
+  // Auto-Save & Draft History state
+  const [autoSaveStatus, setAutoSaveStatus] = useState<"Saved" | "Saving..." | "Unsaved">("Saved");
+  const [draftHistory, setDraftHistory] = useState<DraftSnapshot[]>([]);
+  const [showDraftsModal, setShowDraftsModal] = useState(false);
+
+  // Drag & Drop & Toast state
+  const [isDraggingFile, setIsDraggingFile] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
   const [hoverTooltip, setHoverTooltip] = useState<{
     url: string;
     alt: string;
     x: number;
     y: number;
   } | null>(null);
+
+  // History stack for Undo / Redo
+  const [history, setHistory] = useState<string[]>([]);
+  const [historyIndex, setHistoryIndex] = useState<number>(-1);
+  const isUndoRedoAction = useRef<boolean>(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  // HTML Theme Export Modal
+  const [showHtmlThemeModal, setShowHtmlThemeModal] = useState<boolean>(false);
+
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
+  const previewContainerRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const isDark = theme === "dark";
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
 
   // Smooth Resize split handler with requestAnimationFrame
   const handleMouseDownResize = (e: React.MouseEvent) => {
@@ -97,56 +148,34 @@ export default function MarkdownPreviewer() {
     window.addEventListener("mouseup", handleMouseUp);
   };
 
-  // History stack for Undo / Redo
-  const [history, setHistory] = useState<string[]>([]);
-  const [historyIndex, setHistoryIndex] = useState<number>(-1);
-  const isUndoRedoAction = useRef<boolean>(false);
-
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const previewRef = useRef<HTMLDivElement>(null);
-  const previewContainerRef = useRef<HTMLDivElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  const activeScroll = useRef<"editor" | "preview" | null>(null);
+  // Synchronized Scrolling Logic
+  const isScrollingEditor = useRef(false);
+  const isScrollingPreview = useRef(false);
 
   const handleEditorScroll = () => {
-    if (!isSyncScroll || activeScroll.current === "preview") return;
-    activeScroll.current = "editor";
-
-    const textarea = textareaRef.current;
-    const previewContainer = previewContainerRef.current;
-
-    if (textarea && previewContainer) {
-      const scrollPercentage =
-        textarea.scrollTop / (textarea.scrollHeight - textarea.clientHeight);
-      previewContainer.scrollTop =
-        scrollPercentage * (previewContainer.scrollHeight - previewContainer.clientHeight);
-    }
+    if (!isSyncScroll || isScrollingPreview.current || !textareaRef.current || !previewContainerRef.current) return;
+    isScrollingEditor.current = true;
+    const editor = textareaRef.current;
+    const preview = previewContainerRef.current;
+    const scrollPercentage = editor.scrollTop / (editor.scrollHeight - editor.clientHeight);
+    preview.scrollTop = scrollPercentage * (preview.scrollHeight - preview.clientHeight);
   };
 
   const handlePreviewScroll = () => {
-    if (!isSyncScroll || activeScroll.current === "editor") return;
-    activeScroll.current = "preview";
-
-    const textarea = textareaRef.current;
-    const previewContainer = previewContainerRef.current;
-
-    if (textarea && previewContainer) {
-      const scrollPercentage =
-        previewContainer.scrollTop /
-        (previewContainer.scrollHeight - previewContainer.clientHeight);
-      textarea.scrollTop =
-        scrollPercentage * (textarea.scrollHeight - textarea.clientHeight);
-    }
+    if (!isSyncScroll || isScrollingEditor.current || !textareaRef.current || !previewContainerRef.current) return;
+    isScrollingPreview.current = true;
+    const editor = textareaRef.current;
+    const preview = previewContainerRef.current;
+    const scrollPercentage = preview.scrollTop / (preview.scrollHeight - preview.clientHeight);
+    editor.scrollTop = scrollPercentage * (editor.scrollHeight - editor.clientHeight);
   };
 
   const handleScrollEnd = () => {
-    activeScroll.current = null;
+    isScrollingEditor.current = false;
+    isScrollingPreview.current = false;
   };
 
-  const [isMounted, setIsMounted] = useState(false);
-
-  // Load theme, content, viewMode & splitWidth from localStorage
+  // Initial Load from LocalStorage
   useEffect(() => {
     setIsMounted(true);
     const savedTheme = localStorage.getItem("markdown_preview_theme") as "dark" | "light" | null;
@@ -167,10 +196,22 @@ export default function MarkdownPreviewer() {
       }
     }
 
+    // Load saved drafts history
+    const savedDrafts = localStorage.getItem("markdown_preview_drafts_history");
+    if (savedDrafts) {
+      try {
+        setDraftHistory(JSON.parse(savedDrafts));
+      } catch (e) {
+        console.error("Failed to parse draft history:", e);
+      }
+    }
+
     const savedContent = localStorage.getItem("markdown_preview_content");
     let initialText = "";
     if (savedContent !== null) {
       initialText = savedContent;
+    } else {
+      initialText = SAMPLE_TEMPLATES[0].content;
     }
     setMarkdown(initialText);
     setHistory([initialText]);
@@ -183,7 +224,7 @@ export default function MarkdownPreviewer() {
     localStorage.setItem("markdown_preview_theme", nextTheme);
   };
 
-  // Click outside to close dropdown
+  // Click outside dropdown
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -194,27 +235,49 @@ export default function MarkdownPreviewer() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Save content, viewMode, and splitWidth to localStorage
+  // Auto-Save & LocalStorage Draft History
   useEffect(() => {
-    if (isMounted) {
+    if (!isMounted) return;
+
+    setAutoSaveStatus("Saving...");
+    const timer = setTimeout(() => {
       localStorage.setItem("markdown_preview_content", markdown);
       localStorage.setItem("markdown_preview_view_mode", viewMode);
       localStorage.setItem("markdown_preview_split_width", splitWidth.toString());
-    }
+      setAutoSaveStatus("Saved");
 
+      // Save to Draft History snapshots (if text changed significantly)
+      if (markdown.trim().length > 0) {
+        setDraftHistory((prev) => {
+          if (prev.length > 0 && prev[0].fullText === markdown) return prev;
+          const newSnapshot: DraftSnapshot = {
+            id: Date.now().toString(),
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+            previewText: markdown.trim().substring(0, 70) + (markdown.length > 70 ? "..." : ""),
+            fullText: markdown
+          };
+          const updated = [newSnapshot, ...prev].slice(0, 15);
+          localStorage.setItem("markdown_preview_drafts_history", JSON.stringify(updated));
+          return updated;
+        });
+      }
+    }, 1500);
+
+    // Undo / Redo history tracking
     if (isUndoRedoAction.current) {
       isUndoRedoAction.current = false;
-      return;
+    } else {
+      if (history.length === 0 || history[historyIndex] !== markdown) {
+        const newHistory = history.slice(0, historyIndex + 1);
+        newHistory.push(markdown);
+        if (newHistory.length > 100) newHistory.shift();
+        setHistory(newHistory);
+        setHistoryIndex(newHistory.length - 1);
+      }
     }
 
-    if (history.length === 0 || history[historyIndex] !== markdown) {
-      const newHistory = history.slice(0, historyIndex + 1);
-      newHistory.push(markdown);
-      if (newHistory.length > 100) newHistory.shift();
-      setHistory(newHistory);
-      setHistoryIndex(newHistory.length - 1);
-    }
-  }, [markdown]);
+    return () => clearTimeout(timer);
+  }, [markdown, viewMode, splitWidth]);
 
   const handleUndo = () => {
     if (historyIndex > 0) {
@@ -234,6 +297,7 @@ export default function MarkdownPreviewer() {
     }
   };
 
+  // Keyboard Shortcuts (Undo, Redo, Paste Image)
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
       if (e.shiftKey) {
@@ -249,18 +313,89 @@ export default function MarkdownPreviewer() {
     }
   };
 
-  const insertFormat = (prefix: string, suffix: string = "", defaultText: string = "") => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
+  // Pasting Images from Clipboard (Ctrl+V)
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const items = e.clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf("image") !== -1) {
+        e.preventDefault();
+        const file = items[i].getAsFile();
+        if (!file) continue;
 
+        const reader = new FileReader();
+        reader.onload = (uploadEvent) => {
+          const base64Url = uploadEvent.target?.result as string;
+          if (base64Url && textareaRef.current) {
+            const textarea = textareaRef.current;
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const imageMarkdown = `\n![Pasted Image](${base64Url})\n`;
+            const updated = markdown.substring(0, start) + imageMarkdown + markdown.substring(end);
+            setMarkdown(updated);
+            showToast("📷 Image pasted and converted to Base64!");
+
+            setTimeout(() => {
+              textarea.focus();
+              textarea.setSelectionRange(start + imageMarkdown.length, start + imageMarkdown.length);
+            }, 50);
+          }
+        };
+        reader.readAsDataURL(file);
+        break;
+      }
+    }
+  };
+
+  // Drag & Drop File Upload
+  const handleFileUpload = (file: File) => {
+    if (!file) return;
+    const name = file.name.toLowerCase();
+    if (name.endsWith(".md") || name.endsWith(".txt") || name.endsWith(".markdown")) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const text = e.target?.result as string;
+        if (text !== undefined) {
+          setMarkdown(text);
+          showToast(`📄 Loaded file: ${file.name}`);
+        }
+      };
+      reader.readAsText(file);
+    } else {
+      alert("Please upload a .md, .txt, or .markdown file");
+    }
+  };
+
+  const handleFileDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingFile(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFileUpload(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isDraggingFile) setIsDraggingFile(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingFile(false);
+  };
+
+  // Formatting insert helper
+  const insertFormat = (prefix: string, suffix: string = "", defaultText: string = "") => {
+    if (!textareaRef.current) return;
+    const textarea = textareaRef.current;
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
     const selectedText = markdown.substring(start, end) || defaultText;
     const replacement = `${prefix}${selectedText}${suffix}`;
 
-    const newMarkdown =
-      markdown.substring(0, start) + replacement + markdown.substring(end);
-
+    const newMarkdown = markdown.substring(0, start) + replacement + markdown.substring(end);
     setMarkdown(newMarkdown);
 
     setTimeout(() => {
@@ -275,6 +410,7 @@ export default function MarkdownPreviewer() {
   const handleCopyMarkdown = () => {
     navigator.clipboard.writeText(markdown);
     setCopiedMd(true);
+    showToast("Copied Markdown to clipboard!");
     setTimeout(() => setCopiedMd(false), 2000);
   };
 
@@ -282,25 +418,29 @@ export default function MarkdownPreviewer() {
     if (previewRef.current) {
       navigator.clipboard.writeText(previewRef.current.innerHTML);
       setCopiedHtml(true);
+      showToast("Copied HTML to clipboard!");
       setTimeout(() => setCopiedHtml(false), 2000);
     }
   };
 
-  const [showHtmlThemeModal, setShowHtmlThemeModal] = useState(false);
+  const handleDownloadFile = (type: "md" | "html", selectedTheme?: "dark" | "light") => {
+    let content = "";
+    let filename = "";
+    let mimeType = "";
 
-  const handleDownloadFile = (type: "md" | "html", htmlTheme: "light" | "dark" = "light") => {
-    let content = markdown;
-    let filename = "document.md";
-    let mimeType = "text/markdown";
-
-    if (type === "html" && previewRef.current) {
-      const isDarkHtml = htmlTheme === "dark";
+    if (type === "md") {
+      content = markdown;
+      filename = "document.md";
+      mimeType = "text/markdown";
+    } else if (type === "html" && previewRef.current) {
+      const isDarkHtml = selectedTheme ? selectedTheme === "dark" : isDark;
       content = `<!DOCTYPE html>
-<html lang="en" class="${isDarkHtml ? "dark" : ""}">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Exported Markdown Document</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.18.7/dist/katex.min.css">
   <style>
     body { 
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -332,28 +472,7 @@ export default function MarkdownPreviewer() {
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
       font-size: 0.875em;
       border: 1px solid ${isDarkHtml ? "rgba(255,255,255,0.1)" : "#e2e8f0"};
-      box-shadow: 0 4px 12px ${isDarkHtml ? "rgba(0,0,0,0.3)" : "rgba(0,0,0,0.05)"};
     }
-    pre code { background: transparent !important; color: inherit !important; padding: 0 !important; }
-    code:not(pre code) { 
-      background: ${isDarkHtml ? "rgba(30, 41, 59, 0.8)" : "#f1f5f9"};
-      color: ${isDarkHtml ? "#38bdf8" : "#0284c7"};
-      padding: 0.2em 0.4em;
-      border-radius: 4px;
-      font-size: 0.875em;
-      border: 1px solid ${isDarkHtml ? "rgba(255,255,255,0.08)" : "#e2e8f0"};
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    }
-    /* Syntax Highlighting */
-    .hljs-keyword { color: ${isDarkHtml ? "#bb9af7" : "#7c3aed"}; font-weight: 600; }
-    .hljs-title, .hljs-title.class_ { color: ${isDarkHtml ? "#70a5fd" : "#2563eb"}; font-weight: 600; }
-    .hljs-title.function_ { color: ${isDarkHtml ? "#7aa2f7" : "#0284c7"}; }
-    .hljs-string, .hljs-subst { color: ${isDarkHtml ? "#9ece6a" : "#16a34a"}; }
-    .hljs-attr, .hljs-property { color: ${isDarkHtml ? "#7dcfff" : "#0891b2"}; }
-    .hljs-number, .hljs-literal { color: ${isDarkHtml ? "#ff9e64" : "#ea580c"}; }
-    .hljs-built_in { color: ${isDarkHtml ? "#0db9d7" : "#0284c7"}; }
-    .hljs-comment { color: ${isDarkHtml ? "#565f89" : "#94a3b8"}; font-style: italic; }
-    .hljs-variable { color: ${isDarkHtml ? "#f7768e" : "#dc2626"}; }
     blockquote { 
       border-left: 4px solid ${isDarkHtml ? "#06b6d4" : "#0284c7"};
       margin: 1.5rem 0;
@@ -366,7 +485,6 @@ export default function MarkdownPreviewer() {
     th, td { border: 1px solid ${isDarkHtml ? "rgba(255,255,255,0.08)" : "#e2e8f0"}; padding: 0.75rem 1rem; text-align: left; }
     th { background: ${isDarkHtml ? "#161f30" : "#f1f5f9"}; font-weight: 600; color: ${isDarkHtml ? "#f8fafc" : "#0f172a"}; }
     td { background: ${isDarkHtml ? "rgba(15, 23, 42, 0.4)" : "#ffffff"}; color: ${isDarkHtml ? "#cbd5e1" : "#334155"}; }
-    tr:nth-child(even) td { background: ${isDarkHtml ? "rgba(15, 23, 42, 0.7)" : "#f8fafc"}; }
   </style>
 </head>
 <body>
@@ -385,47 +503,6 @@ ${previewRef.current.innerHTML}
     a.click();
     URL.revokeObjectURL(url);
     setShowHtmlThemeModal(false);
-  };
-
-  const [isDraggingFile, setIsDraggingFile] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleFileUpload = (file: File) => {
-    if (!file) return;
-    const name = file.name.toLowerCase();
-    if (name.endsWith(".md") || name.endsWith(".txt") || name.endsWith(".markdown")) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const text = e.target?.result as string;
-        if (text !== undefined) {
-          setMarkdown(text);
-        }
-      };
-      reader.readAsText(file);
-    } else {
-      alert("Please upload a .md or .txt file");
-    }
-  };
-
-  const handleFileDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDraggingFile(false);
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      handleFileUpload(e.dataTransfer.files[0]);
-    }
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!isDraggingFile) setIsDraggingFile(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDraggingFile(false);
   };
 
   const handleClear = () => {
@@ -450,86 +527,150 @@ ${previewRef.current.innerHTML}
   const wordCount = markdown.trim() ? markdown.trim().split(/\s+/).length : 0;
   const readTime = Math.ceil(wordCount / 200);
 
-  const isDark = theme === "dark";
-
   return (
     <div
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleFileDrop}
-      className={`flex flex-col h-screen max-h-screen overflow-hidden font-sans select-none transition-colors duration-300 relative ${
-        isDark ? "theme-dark bg-[#090d16] text-slate-100" : "theme-light bg-slate-100 text-slate-900"
+      className={`theme-${theme} flex flex-col h-screen overflow-hidden ${
+        isDark ? "bg-[#0b0f17] text-slate-100" : "bg-slate-50 text-slate-900"
       }`}
     >
-      {/* Drag and Drop Visual Overlay */}
-      {isDraggingFile && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-cyan-950/80 backdrop-blur-md border-4 border-dashed border-cyan-400 m-4 rounded-3xl animate-in fade-in zoom-in-95 pointer-events-none">
-          <div className="p-4 rounded-full bg-cyan-500/20 text-cyan-400 mb-3 animate-bounce">
-            <Upload className="w-12 h-12" />
-          </div>
-          <h2 className="text-xl font-bold text-cyan-200">Drop your file here</h2>
-          <p className="text-sm text-cyan-400/80 mt-1">Supports .md, .txt, and .markdown files</p>
+      {/* Toast Banner */}
+      {toastMessage && (
+        <div className="fixed top-16 right-6 z-50 px-4 py-2.5 rounded-xl bg-cyan-600 text-white font-medium text-xs shadow-2xl animate-in fade-in slide-in-from-top-4 flex items-center gap-2">
+          <Sparkles className="w-4 h-4" />
+          {toastMessage}
         </div>
       )}
-      {/* Top Header - Glassmorphism Navbar */}
+
+      {/* Header Bar */}
       <header
-        className={`flex flex-wrap items-center justify-between px-3 md:px-5 py-2 md:py-2.5 backdrop-blur-md border-b gap-2 md:gap-3 z-30 shadow-xl transition-colors duration-300 ${
+        className={`px-5 py-2.5 border-b flex items-center justify-between z-30 shadow-sm backdrop-blur-md transition-colors duration-300 ${
           isDark
-            ? "bg-[#0e1626]/80 border-slate-800/80"
+            ? "bg-[#0e1626]/90 border-slate-800/80"
             : "bg-white/90 border-slate-200"
         }`}
       >
-        {/* Brand Header - Minimal & Sleek */}
-        <div className="flex items-center gap-2">
-          <div
-            className={`p-1.5 rounded-lg border transition-all flex items-center justify-center ${
-              isDark
-                ? "bg-cyan-500/10 border-cyan-500/30 text-cyan-400"
-                : "bg-cyan-50 border-cyan-200 text-cyan-600"
-            }`}
-          >
-            <FileText className="w-4 h-4" />
+        {/* Left Header Branding & Auto-Save Badge */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-500 text-white shadow-md shadow-cyan-500/20">
+              <Sparkles className="w-4 h-4 animate-pulse" />
+            </div>
+            <h1 className="text-base font-bold tracking-tight hidden sm:block">
+              Markdown <span className="text-cyan-500 font-extrabold">Studio</span>
+            </h1>
           </div>
-          <h1
-            className={`font-bold text-xs sm:text-sm tracking-tight ${
-              isDark ? "text-slate-100" : "text-slate-800"
+
+          <div className={`h-4 w-px ${isDark ? "bg-slate-800" : "bg-slate-300"} hidden sm:block`} />
+
+          {/* Auto Save Badge */}
+          <div className="flex items-center gap-1.5 text-xs font-mono px-2.5 py-1 rounded-lg bg-slate-800/50 border border-slate-700/60 text-slate-300">
+            <Save className={`w-3.5 h-3.5 ${autoSaveStatus === "Saving..." ? "text-amber-400 animate-spin" : "text-emerald-400"}`} />
+            <span className="hidden xs:inline">{autoSaveStatus}</span>
+          </div>
+
+          {/* Draft History Button */}
+          <button
+            onClick={() => setShowDraftsModal(true)}
+            className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg border transition-all ${
+              isDark
+                ? "bg-slate-800/80 border-slate-700/60 text-slate-300 hover:text-white hover:bg-slate-700"
+                : "bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200"
             }`}
+            title="View Saved Draft Snapshots"
           >
-            Markdown Preview
-          </h1>
+            <History className="w-3.5 h-3.5 text-indigo-400" />
+            <span className="hidden md:inline">Drafts ({draftHistory.length})</span>
+          </button>
         </div>
 
-        {/* Action Controls - Responsive Wrapper */}
-        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-          {/* Templates Dropdown Menu */}
+        {/* Center: View Switcher */}
+        <div
+          className={`flex items-center p-0.5 rounded-xl border text-xs font-semibold ${
+            isDark
+              ? "bg-[#090d16] border-slate-800"
+              : "bg-slate-100 border-slate-200"
+          }`}
+        >
+          <button
+            onClick={() => setViewMode("split")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
+              viewMode === "split"
+                ? "bg-cyan-500 text-white shadow-sm font-bold"
+                : isDark
+                ? "text-slate-400 hover:text-slate-200"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            <Columns className="w-3.5 h-3.5" />
+            <span className="hidden md:inline">Split View</span>
+          </button>
+
+          <button
+            onClick={() => setViewMode("editor")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
+              viewMode === "editor"
+                ? "bg-cyan-500 text-white shadow-sm font-bold"
+                : isDark
+                ? "text-slate-400 hover:text-slate-200"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            <FileEdit className="w-3.5 h-3.5" />
+            <span className="hidden md:inline">Editor Only</span>
+          </button>
+
+          <button
+            onClick={() => setViewMode("preview")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
+              viewMode === "preview"
+                ? "bg-cyan-500 text-white shadow-sm font-bold"
+                : isDark
+                ? "text-slate-400 hover:text-slate-200"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            <Eye className="w-3.5 h-3.5" />
+            <span className="hidden md:inline">Preview Only</span>
+          </button>
+        </div>
+
+        {/* Right Header Controls */}
+        <div className="flex items-center gap-2">
+          {/* Link to API Docs Page */}
+          <Link
+            href="/api-docs"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 hover:bg-indigo-500/20 transition-all"
+            title="View API Documentation"
+          >
+            <FileCode className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">API Docs</span>
+          </Link>
+
+          {/* Templates Dropdown */}
           <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setShowTemplatesDropdown(!showTemplatesDropdown)}
-              className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-all shadow-sm border ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all border ${
                 isDark
-                  ? "bg-slate-800/60 hover:bg-slate-700/80 text-slate-300 hover:text-white border-slate-700/60"
-                  : "bg-slate-200/80 hover:bg-slate-300 text-slate-700 hover:text-slate-900 border-slate-300"
+                  ? "bg-slate-800/80 border-slate-700/60 text-slate-200 hover:bg-slate-700"
+                  : "bg-slate-100 border-slate-200 text-slate-800 hover:bg-slate-200"
               }`}
             >
-              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-              <span className="hidden xs:inline sm:inline">Templates</span>
-              <ChevronDown className="w-3 h-3 opacity-60" />
+              <Zap className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+              <span className="hidden sm:inline">Templates</span>
+              <ChevronDown className="w-3.5 h-3.5 opacity-70" />
             </button>
 
             {showTemplatesDropdown && (
               <div
-                className={`absolute right-0 mt-2 w-52 sm:w-56 border rounded-xl shadow-2xl py-1.5 z-50 backdrop-blur-xl ${
+                className={`absolute right-0 mt-2 w-64 rounded-xl border shadow-2xl py-1.5 z-50 animate-in fade-in zoom-in-95 ${
                   isDark
-                    ? "bg-[#111827] border-slate-700/80 text-slate-200"
-                    : "bg-white border-slate-200 text-slate-800"
+                    ? "bg-[#0f172a] border-slate-700 text-slate-100"
+                    : "bg-white border-slate-200 text-slate-900"
                 }`}
               >
-                <div
-                  className={`px-3 py-1 text-[10px] font-semibold uppercase tracking-wider border-b ${
-                    isDark ? "text-slate-400 border-slate-800" : "text-slate-500 border-slate-100"
-                  }`}
-                >
-                  Preset Templates
+                <div className="px-3 py-1.5 text-[10px] font-mono uppercase tracking-wider text-slate-400 border-b border-slate-700/50">
+                  Select Preset Template
                 </div>
                 {SAMPLE_TEMPLATES.map((tmpl) => (
                   <button
@@ -537,177 +678,47 @@ ${previewRef.current.innerHTML}
                     onClick={() => {
                       setMarkdown(tmpl.content);
                       setShowTemplatesDropdown(false);
+                      showToast(`Loaded "${tmpl.name}" template`);
                     }}
-                    className={`w-full text-left px-3 py-2 text-xs transition-colors flex flex-col gap-0.5 ${
+                    className={`w-full text-left px-3.5 py-2 text-xs transition-colors flex flex-col gap-0.5 ${
                       isDark
-                        ? "hover:bg-cyan-500/10 hover:text-cyan-400 text-slate-200"
-                        : "hover:bg-cyan-50 hover:text-cyan-700 text-slate-700"
+                        ? "hover:bg-slate-800/80 text-slate-200 hover:text-cyan-400"
+                        : "hover:bg-slate-100 text-slate-800 hover:text-cyan-600"
                     }`}
                   >
-                    <span className="font-semibold">{tmpl.name}</span>
-                    <span className={`text-[10px] ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-                      {tmpl.description}
-                    </span>
+                    <span className="font-bold">{tmpl.name}</span>
+                    <span className="text-[11px] text-slate-400 truncate">{tmpl.description}</span>
                   </button>
                 ))}
               </div>
             )}
           </div>
 
-          {/* Sync Scroll Toggle */}
-          <button
-            onClick={() => setIsSyncScroll(!isSyncScroll)}
-            className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all border ${
-              isSyncScroll
-                ? isDark
-                  ? "bg-cyan-500/10 text-cyan-400 border-cyan-500/30 shadow-sm"
-                  : "bg-cyan-50 text-cyan-700 border-cyan-300 shadow-sm"
-                : isDark
-                ? "bg-slate-800/40 text-slate-500 border-slate-700/50 hover:text-slate-300"
-                : "bg-slate-100 text-slate-400 border-slate-300 hover:text-slate-700"
-            }`}
-            title={isSyncScroll ? "Sync Scroll Enabled" : "Sync Scroll Disabled"}
-          >
-            <ArrowUpDown className={`w-3.5 h-3.5 ${isSyncScroll ? "opacity-100" : "opacity-40"}`} />
-            <span className="hidden lg:inline">Sync Scroll</span>
-            <span
-              className={`w-1.5 h-1.5 rounded-full ${
-                isSyncScroll ? "bg-cyan-400 animate-pulse" : "bg-slate-500"
-              }`}
-            />
-          </button>
-
-          <div className={`h-4 w-px mx-0.5 hidden sm:block ${isDark ? "bg-slate-800" : "bg-slate-300"}`} />
-
-          {/* Hidden File Input */}
-          <input
-            type="file"
-            ref={fileInputRef}
-            accept=".md,.txt,.markdown"
-            className="hidden"
-            onChange={(e) => {
-              if (e.target.files && e.target.files.length > 0) {
-                handleFileUpload(e.target.files[0]);
-                e.target.value = "";
-              }
-            }}
-          />
-
-          {/* Import File Button */}
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className={`flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 border rounded-lg text-xs font-medium transition-all shadow-sm active:scale-95 ${
-              isDark
-                ? "bg-slate-800/80 hover:bg-slate-700 text-slate-200 border-slate-700/60 hover:border-cyan-500/50"
-                : "bg-white hover:bg-slate-50 text-slate-700 border-slate-300 hover:border-cyan-500"
-            }`}
-            title="Import .md or .txt file"
-          >
-            <Upload className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="hidden sm:inline">Import</span>
-          </button>
-
-          {/* View mode toggle */}
-          <div
-            className={`flex p-0.5 sm:p-1 rounded-xl border ${
-              isDark ? "bg-[#0b0f17] border-slate-800" : "bg-slate-200/60 border-slate-300"
-            }`}
-          >
-            <button
-              onClick={() => setViewMode("editor")}
-              className={`flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-                viewMode === "editor"
-                  ? isDark
-                    ? "bg-slate-800 text-cyan-400 shadow-md border border-slate-700/60"
-                    : "bg-white text-cyan-600 shadow border border-slate-200"
-                  : isDark
-                  ? "text-slate-400 hover:text-slate-200"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
-              title="Editor View"
-            >
-              <FileEdit className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">Editor</span>
-            </button>
-            <button
-              onClick={() => setViewMode("split")}
-              className={`flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-                viewMode === "split"
-                  ? isDark
-                    ? "bg-slate-800 text-cyan-400 shadow-md border border-slate-700/60"
-                    : "bg-white text-cyan-600 shadow border border-slate-200"
-                  : isDark
-                  ? "text-slate-400 hover:text-slate-200"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
-              title="Split View"
-            >
-              <Columns className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">Split</span>
-            </button>
-            <button
-              onClick={() => setViewMode("preview")}
-              className={`flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-                viewMode === "preview"
-                  ? isDark
-                    ? "bg-slate-800 text-cyan-400 shadow-md border border-slate-700/60"
-                    : "bg-white text-cyan-600 shadow border border-slate-200"
-                  : isDark
-                  ? "text-slate-400 hover:text-slate-200"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
-              title="Preview View"
-            >
-              <Eye className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">Preview</span>
-            </button>
-          </div>
-
-          <div className={`h-4 w-px mx-0.5 hidden sm:block ${isDark ? "bg-slate-800" : "bg-slate-300"}`} />
-
-          {/* Export Options */}
+          {/* Copy Actions */}
           <button
             onClick={handleCopyMarkdown}
-            className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 border rounded-lg text-xs font-medium transition-all shadow-sm active:scale-95 ${
+            className={`p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg text-xs transition-all flex items-center gap-1.5 border ${
               isDark
-                ? "bg-slate-800/80 hover:bg-slate-700 text-slate-200 border-slate-700/60"
-                : "bg-white hover:bg-slate-50 text-slate-700 border-slate-300"
+                ? "bg-slate-800/80 border-slate-700/60 text-slate-300 hover:text-white"
+                : "bg-slate-100 border-slate-200 text-slate-700 hover:text-slate-900"
             }`}
             title="Copy Markdown"
           >
-            {copiedMd ? (
-              <>
-                <Check className="w-3.5 h-3.5 text-emerald-500" />
-                <span className="text-emerald-500 font-semibold hidden xs:inline">Copied!</span>
-              </>
-            ) : (
-              <>
-                <Copy className="w-3.5 h-3.5 opacity-70" />
-                <span className="hidden lg:inline">Copy MD</span>
-              </>
-            )}
+            {copiedMd ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+            <span className="hidden lg:inline">Copy MD</span>
           </button>
 
           <button
             onClick={handleCopyHtml}
-            className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 border rounded-lg text-xs font-medium transition-all shadow-sm active:scale-95 ${
+            className={`p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg text-xs transition-all flex items-center gap-1.5 border ${
               isDark
-                ? "bg-slate-800/80 hover:bg-slate-700 text-slate-200 border-slate-700/60"
-                : "bg-white hover:bg-slate-50 text-slate-700 border-slate-300"
+                ? "bg-slate-800/80 border-slate-700/60 text-slate-300 hover:text-white"
+                : "bg-slate-100 border-slate-200 text-slate-700 hover:text-slate-900"
             }`}
-            title="Copy rendered HTML"
+            title="Copy HTML"
           >
-            {copiedHtml ? (
-              <>
-                <Check className="w-3.5 h-3.5 text-emerald-500" />
-                <span className="text-emerald-500 font-semibold hidden xs:inline">Copied!</span>
-              </>
-            ) : (
-              <>
-                <Code className="w-3.5 h-3.5 opacity-70" />
-                <span className="hidden lg:inline">Copy HTML</span>
-              </>
-            )}
+            {copiedHtml ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Code className="w-3.5 h-3.5 text-indigo-400" />}
+            <span className="hidden lg:inline">Copy HTML</span>
           </button>
 
           {/* Download Dropdown */}
@@ -718,19 +729,19 @@ ${previewRef.current.innerHTML}
           >
             <button
               onClick={() => handleDownloadFile("md")}
-              className={`flex items-center gap-1 px-2 sm:px-2.5 py-1.5 transition-all border-r ${
+              className={`flex items-center gap-1 px-2.5 py-1.5 transition-all border-r ${
                 isDark
                   ? "hover:bg-slate-700 text-slate-300 hover:text-white border-slate-700/60"
                   : "hover:bg-slate-100 text-slate-700 hover:text-slate-900 border-slate-200"
               }`}
               title="Download .md file"
             >
-              <Download className="w-3.5 h-3.5 text-cyan-500" />
+              <Download className="w-3.5 h-3.5 text-cyan-400" />
               <span className="font-semibold">.MD</span>
             </button>
             <button
               onClick={() => setShowHtmlThemeModal(true)}
-              className={`flex items-center gap-1 px-2 sm:px-2.5 py-1.5 transition-all ${
+              className={`flex items-center gap-1 px-2.5 py-1.5 transition-all ${
                 isDark
                   ? "hover:bg-slate-700 text-slate-300 hover:text-white"
                   : "hover:bg-slate-100 text-slate-700 hover:text-slate-900"
@@ -741,7 +752,7 @@ ${previewRef.current.innerHTML}
             </button>
           </div>
 
-          {/* Theme Switcher & Fullscreen */}
+          {/* Theme & Fullscreen & Clear */}
           <button
             onClick={toggleTheme}
             className={`p-1.5 rounded-lg transition-all border ${
@@ -757,9 +768,7 @@ ${previewRef.current.innerHTML}
           <button
             onClick={toggleFullscreen}
             className={`p-1.5 rounded-lg transition-all hidden sm:block ${
-              isDark
-                ? "text-slate-400 hover:text-cyan-400 hover:bg-slate-800"
-                : "text-slate-600 hover:text-cyan-600 hover:bg-slate-200"
+              isDark ? "text-slate-400 hover:text-cyan-400 hover:bg-slate-800" : "text-slate-600 hover:text-cyan-600 hover:bg-slate-200"
             }`}
             title="Toggle Fullscreen"
           >
@@ -769,9 +778,7 @@ ${previewRef.current.innerHTML}
           <button
             onClick={handleClear}
             className={`p-1.5 rounded-lg transition-all ${
-              isDark
-                ? "text-slate-400 hover:text-rose-400 hover:bg-rose-500/10"
-                : "text-slate-500 hover:text-rose-600 hover:bg-rose-50"
+              isDark ? "text-slate-400 hover:text-rose-400 hover:bg-rose-500/10" : "text-slate-500 hover:text-rose-600 hover:bg-rose-50"
             }`}
             title="Clear text"
           >
@@ -780,7 +787,7 @@ ${previewRef.current.innerHTML}
         </div>
       </header>
 
-      {/* Main Workspace (Responsive Split / Stack View for Mobile) */}
+      {/* Main Workspace */}
       <main className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
         {/* Left Pane: Editor */}
         {(viewMode === "split" || viewMode === "editor") && (
@@ -788,18 +795,27 @@ ${previewRef.current.innerHTML}
             style={{
               width: isMounted && viewMode === "split" && window.innerWidth >= 768 ? `${splitWidth}%` : undefined,
             }}
-            className={`flex flex-col border-b md:border-b-0 transition-colors duration-300 ${
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleFileDrop}
+            className={`flex flex-col border-b md:border-b-0 transition-colors duration-300 relative ${
               viewMode === "split" ? "h-1/2 md:h-full" : "h-full w-full"
             } ${
               isDark ? "bg-[#0b0f17] border-slate-800/80" : "bg-white border-slate-200"
             } select-text`}
           >
+            {/* Drag & Drop File Overlay */}
+            {isDraggingFile && (
+              <div className="absolute inset-0 z-40 bg-indigo-600/30 backdrop-blur-sm border-2 border-dashed border-indigo-400 rounded-xl flex flex-col items-center justify-center text-white gap-2 pointer-events-none animate-in fade-in">
+                <Upload className="w-10 h-10 animate-bounce text-indigo-300" />
+                <span className="text-base font-bold">Drop Markdown (.md / .txt) file here!</span>
+              </div>
+            )}
+
             {/* Pro Formatting Toolbar */}
             <div
               className={`flex items-center justify-between px-5 h-[41px] border-b overflow-x-auto transition-colors duration-300 ${
-                isDark
-                  ? "bg-[#0e1626]/90 border-slate-800/70"
-                  : "bg-slate-100/90 border-slate-200"
+                isDark ? "bg-[#0e1626]/90 border-slate-800/70" : "bg-slate-100/90 border-slate-200"
               }`}
             >
               <div className="flex items-center gap-1">
@@ -828,7 +844,7 @@ ${previewRef.current.innerHTML}
                         : "hover:bg-slate-200 text-slate-700 hover:text-cyan-600"
                       : "opacity-40 cursor-not-allowed"
                   }`}
-                  title="Redo (Ctrl+Y / Ctrl+Shift+Z)"
+                  title="Redo (Ctrl+Y)"
                 >
                   <Redo className="w-4 h-4" />
                 </button>
@@ -838,27 +854,21 @@ ${previewRef.current.innerHTML}
                 {/* Typography formatting */}
                 <button
                   onClick={() => insertFormat("**", "**", "bold text")}
-                  className={`p-1.5 rounded-md transition-all ${
-                    isDark ? "hover:bg-slate-800 text-slate-300 hover:text-white" : "hover:bg-slate-200 text-slate-700 hover:text-slate-900"
-                  }`}
+                  className={`p-1.5 rounded-md transition-all ${isDark ? "hover:bg-slate-800 text-slate-300" : "hover:bg-slate-200 text-slate-700"}`}
                   title="Bold"
                 >
                   <Bold className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => insertFormat("*", "*", "italic text")}
-                  className={`p-1.5 rounded-md transition-all ${
-                    isDark ? "hover:bg-slate-800 text-slate-300 hover:text-white" : "hover:bg-slate-200 text-slate-700 hover:text-slate-900"
-                  }`}
+                  className={`p-1.5 rounded-md transition-all ${isDark ? "hover:bg-slate-800 text-slate-300" : "hover:bg-slate-200 text-slate-700"}`}
                   title="Italic"
                 >
                   <Italic className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => insertFormat("### ", "", "Heading")}
-                  className={`p-1.5 rounded-md transition-all ${
-                    isDark ? "hover:bg-slate-800 text-slate-300 hover:text-white" : "hover:bg-slate-200 text-slate-700 hover:text-slate-900"
-                  }`}
+                  className={`p-1.5 rounded-md transition-all ${isDark ? "hover:bg-slate-800 text-slate-300" : "hover:bg-slate-200 text-slate-700"}`}
                   title="Heading"
                 >
                   <Heading className="w-4 h-4" />
@@ -866,30 +876,45 @@ ${previewRef.current.innerHTML}
 
                 <div className={`h-4 w-px mx-1.5 ${isDark ? "bg-slate-800" : "bg-slate-300"}`} />
 
-                {/* Code & Quote */}
+                {/* Code, Quote, Callout, Math, Mermaid */}
                 <button
                   onClick={() => insertFormat("`", "`", "code")}
-                  className={`p-1.5 rounded-md transition-all ${
-                    isDark ? "hover:bg-slate-800 text-slate-300 hover:text-white" : "hover:bg-slate-200 text-slate-700 hover:text-slate-900"
-                  }`}
+                  className={`p-1.5 rounded-md transition-all ${isDark ? "hover:bg-slate-800 text-slate-300" : "hover:bg-slate-200 text-slate-700"}`}
                   title="Inline Code"
                 >
                   <Code className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => insertFormat("> ", "", "Quote")}
-                  className={`p-1.5 rounded-md transition-all ${
-                    isDark ? "hover:bg-slate-800 text-slate-300 hover:text-white" : "hover:bg-slate-200 text-slate-700 hover:text-slate-900"
-                  }`}
+                  className={`p-1.5 rounded-md transition-all ${isDark ? "hover:bg-slate-800 text-slate-300" : "hover:bg-slate-200 text-slate-700"}`}
                   title="Blockquote"
                 >
                   <Quote className="w-4 h-4" />
                 </button>
                 <button
+                  onClick={() => insertFormat("> [!NOTE]\n> ", "", "Important alert message")}
+                  className={`p-1.5 rounded-md transition-all ${isDark ? "hover:bg-slate-800 text-indigo-400" : "hover:bg-slate-200 text-indigo-600"}`}
+                  title="Insert GitHub Callout Alert"
+                >
+                  <AlertCircle className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => insertFormat("$\n", "\n$", "E = mc^2")}
+                  className={`p-1.5 rounded-md transition-all ${isDark ? "hover:bg-slate-800 text-emerald-400" : "hover:bg-slate-200 text-emerald-600"}`}
+                  title="Insert KaTeX Math Formula"
+                >
+                  <span className="font-mono font-bold text-xs">Fx</span>
+                </button>
+                <button
+                  onClick={() => insertFormat("```mermaid\ngraph TD\n    A[Start] --> B[Finish]\n```\n", "")}
+                  className={`p-1.5 rounded-md transition-all ${isDark ? "hover:bg-slate-800 text-amber-400" : "hover:bg-slate-200 text-amber-600"}`}
+                  title="Insert Mermaid Diagram"
+                >
+                  <span className="font-mono font-bold text-xs">📊</span>
+                </button>
+                <button
                   onClick={() => insertFormat("[", "](https://example.com)", "link text")}
-                  className={`p-1.5 rounded-md transition-all ${
-                    isDark ? "hover:bg-slate-800 text-slate-300 hover:text-white" : "hover:bg-slate-200 text-slate-700 hover:text-slate-900"
-                  }`}
+                  className={`p-1.5 rounded-md transition-all ${isDark ? "hover:bg-slate-800 text-slate-300" : "hover:bg-slate-200 text-slate-700"}`}
                   title="Link"
                 >
                   <LinkIcon className="w-4 h-4" />
@@ -900,54 +925,61 @@ ${previewRef.current.innerHTML}
                 {/* Lists & Tables */}
                 <button
                   onClick={() => insertFormat("- ", "", "List item")}
-                  className={`p-1.5 rounded-md transition-all ${
-                    isDark ? "hover:bg-slate-800 text-slate-300 hover:text-white" : "hover:bg-slate-200 text-slate-700 hover:text-slate-900"
-                  }`}
+                  className={`p-1.5 rounded-md transition-all ${isDark ? "hover:bg-slate-800 text-slate-300" : "hover:bg-slate-200 text-slate-700"}`}
                   title="Unordered List"
                 >
                   <List className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => insertFormat("1. ", "", "List item")}
-                  className={`p-1.5 rounded-md transition-all ${
-                    isDark ? "hover:bg-slate-800 text-slate-300 hover:text-white" : "hover:bg-slate-200 text-slate-700 hover:text-slate-900"
-                  }`}
+                  className={`p-1.5 rounded-md transition-all ${isDark ? "hover:bg-slate-800 text-slate-300" : "hover:bg-slate-200 text-slate-700"}`}
                   title="Ordered List"
                 >
                   <ListOrdered className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() =>
-                    insertFormat(
-                      "\n| Header 1 | Header 2 |\n| --- | --- |\n| Cell 1 | Cell 2 |\n",
-                      ""
-                    )
+                    insertFormat("\n| Header 1 | Header 2 |\n| --- | --- |\n| Cell 1 | Cell 2 |\n", "")
                   }
-                  className={`p-1.5 rounded-md transition-all ${
-                    isDark ? "hover:bg-slate-800 text-slate-300 hover:text-white" : "hover:bg-slate-200 text-slate-700 hover:text-slate-900"
-                  }`}
+                  className={`p-1.5 rounded-md transition-all ${isDark ? "hover:bg-slate-800 text-slate-300" : "hover:bg-slate-200 text-slate-700"}`}
                   title="Table"
                 >
                   <Table className="w-4 h-4" />
                 </button>
               </div>
 
-
+              {/* Upload File button */}
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])}
+                accept=".md,.txt,.markdown"
+                className="hidden"
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors ${
+                  isDark ? "hover:bg-slate-800 text-slate-400 hover:text-white" : "hover:bg-slate-200 text-slate-600"
+                }`}
+                title="Open local .md or .txt file"
+              >
+                <Upload className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Open File</span>
+              </button>
             </div>
 
-            {/* Editor Area with Floating Image Thumbnails */}
+            {/* Editor Textarea */}
             <div className="flex-1 relative flex flex-col min-h-0">
               <textarea
                 ref={textareaRef}
                 value={markdown}
                 onChange={(e) => setMarkdown(e.target.value)}
                 onKeyDown={handleKeyDown}
+                onPaste={handlePaste}
                 onScroll={handleEditorScroll}
-                onMouseLeave={() => {
-                  handleScrollEnd();
-                }}
+                onMouseLeave={handleScrollEnd}
                 onTouchEnd={handleScrollEnd}
-                placeholder="Write your markdown here..."
+                placeholder="Type your markdown here... (Drag & drop files or Ctrl+V paste images supported)"
                 className={`w-full flex-1 p-5 bg-transparent font-mono text-sm resize-none focus:outline-none leading-relaxed tracking-wide ${
                   isDark
                     ? "text-slate-200 selection:bg-cyan-500/30 selection:text-cyan-200"
@@ -955,108 +987,11 @@ ${previewRef.current.innerHTML}
                 }`}
                 spellCheck={false}
               />
-
-              {/* Floating Hover Image Popup Tooltip */}
-              {hoverTooltip && (
-                <div
-                  className="fixed z-50 pointer-events-none p-1.5 rounded-xl bg-[#090d16]/95 border border-cyan-500/40 shadow-2xl backdrop-blur-md transition-opacity duration-200 flex flex-col items-center gap-1.5 animate-in fade-in zoom-in-95"
-                  style={{
-                    left: `${Math.min(hoverTooltip.x + 15, window.innerWidth - 220)}px`,
-                    top: `${Math.min(hoverTooltip.y + 15, window.innerHeight - 220)}px`,
-                  }}
-                >
-                  <div className="flex items-center gap-1 text-[10px] font-mono text-cyan-400 max-w-[180px] truncate">
-                    <ImageIcon className="w-3 h-3 shrink-0" />
-                    <span className="truncate">{hoverTooltip.alt}</span>
-                  </div>
-                  <img
-                    src={hoverTooltip.url}
-                    alt={hoverTooltip.alt}
-                    className="w-48 h-32 object-cover rounded-lg border border-slate-800 shadow-md bg-slate-900"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src =
-                        "https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=300&auto=format&fit=crop";
-                    }}
-                  />
-                </div>
-              )}
-
-              {/* Detected Images Thumbnail Bar (Inside Editor Pane) */}
-              {(() => {
-                const imgRegex = /!\[(.*?)\]\((.*?)\)/g;
-                const matches = Array.from(markdown.matchAll(imgRegex));
-                if (matches.length === 0) return null;
-
-                return (
-                  <div
-                    className={`px-4 py-2 border-t flex items-center gap-3 overflow-x-auto shrink-0 ${
-                      isDark
-                        ? "bg-[#0e1626]/90 border-slate-800/80"
-                        : "bg-slate-100 border-slate-200"
-                    }`}
-                  >
-                    <div className="flex items-center gap-1.5 text-[11px] font-medium text-cyan-500 shrink-0">
-                      <ImageIcon className="w-3.5 h-3.5" />
-                      <span>Detected Images ({matches.length}):</span>
-                    </div>
-
-                    <div className="flex items-center gap-2 overflow-x-auto py-0.5 scrollbar-thin">
-                      {matches.map((m, idx) => {
-                        const altText = m[1] || `Image ${idx + 1}`;
-                        const imgUrl = m[2];
-                        return (
-                          <div
-                            key={idx}
-                            className={`group relative flex items-center gap-2 px-2.5 py-1 rounded-lg border text-xs shrink-0 transition-all cursor-pointer ${
-                              isDark
-                                ? "bg-slate-800/70 border-slate-700/60 hover:border-cyan-500/80 hover:bg-slate-800"
-                                : "bg-white border-slate-300 hover:border-cyan-500 hover:bg-cyan-50/50"
-                            }`}
-                            onClick={() => {
-                              if (textareaRef.current) {
-                                const pos = markdown.indexOf(m[0]);
-                                if (pos !== -1) {
-                                  textareaRef.current.focus();
-                                  textareaRef.current.setSelectionRange(pos, pos + m[0].length);
-                                }
-                              }
-                            }}
-                            onMouseEnter={(e) => {
-                              const rect = e.currentTarget.getBoundingClientRect();
-                              setHoverTooltip({
-                                url: imgUrl,
-                                alt: altText,
-                                x: rect.left - 35,
-                                y: rect.top - 185,
-                              });
-                            }}
-                            onMouseLeave={() => setHoverTooltip(null)}
-                            title={`Click to locate in editor: ${altText}`}
-                          >
-                            <img
-                              src={imgUrl}
-                              alt={altText}
-                              className="w-6 h-6 object-cover rounded border border-slate-700/50 shrink-0 bg-slate-900"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).src =
-                                  "https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=100&auto=format&fit=crop";
-                              }}
-                            />
-                            <span className={`text-[11px] font-medium max-w-[140px] truncate ${isDark ? "text-slate-200" : "text-slate-700"}`}>
-                              {altText}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })()}
             </div>
           </div>
         )}
 
-        {/* Draggable Split Handle Divider (Desktop Only) */}
+        {/* Draggable Split Handle Divider */}
         {viewMode === "split" && (
           <div
             onMouseDown={handleMouseDownResize}
@@ -1088,7 +1023,6 @@ ${previewRef.current.innerHTML}
                 <span className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse" />
                 Live Render Output
               </span>
-
             </div>
 
             <div
@@ -1100,8 +1034,51 @@ ${previewRef.current.innerHTML}
             >
               <div ref={previewRef} className="markdown-body max-w-none">
                 <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  rehypePlugins={[rehypeHighlight]}
+                  remarkPlugins={[remarkGfm, remarkMath]}
+                  rehypePlugins={[rehypeHighlight, rehypeKatex]}
+                  components={{
+                    code({ node, inline, className, children, ...props }: any) {
+                      const match = /language-(\w+)/.exec(className || "");
+                      if (!inline && match && match[1] === "mermaid") {
+                        return <MermaidRenderer chart={String(children).replace(/\n$/, "")} />;
+                      }
+                      return (
+                        <code className={className} {...props}>
+                          {children}
+                        </code>
+                      );
+                    },
+                    blockquote({ children, ...props }: any) {
+                      // Detect GitHub Callout Alerts (> [!NOTE], > [!TIP], > [!IMPORTANT], > [!WARNING], > [!CAUTION])
+                      const childrenArray = React.Children.toArray(children);
+                      let alertType: string | null = null;
+
+                      if (childrenArray.length > 0) {
+                        const firstChild: any = childrenArray[0];
+                        if (firstChild && firstChild.props && firstChild.props.children) {
+                          const text = String(firstChild.props.children);
+                          const match = text.match(/^\[\!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]/i);
+                          if (match) {
+                            alertType = match[1].toLowerCase();
+                          }
+                        }
+                      }
+
+                      if (alertType) {
+                        return (
+                          <div className={`markdown-alert markdown-alert-${alertType}`}>
+                            <div className="markdown-alert-title font-bold text-xs uppercase flex items-center gap-1.5 mb-1">
+                              <AlertCircle className="w-4 h-4" />
+                              {alertType}
+                            </div>
+                            <div className="markdown-alert-content">{children}</div>
+                          </div>
+                        );
+                      }
+
+                      return <blockquote {...props}>{children}</blockquote>;
+                    },
+                  }}
                 >
                   {markdown}
                 </ReactMarkdown>
@@ -1114,9 +1091,7 @@ ${previewRef.current.innerHTML}
       {/* Footer & Stats Bar */}
       <footer
         className={`px-5 py-2 border-t text-xs flex items-center justify-between gap-3 z-30 shadow-lg transition-colors duration-300 ${
-          isDark
-            ? "bg-[#0e1626] border-slate-800/80 text-slate-400"
-            : "bg-white border-slate-200 text-slate-600"
+          isDark ? "bg-[#0e1626] border-slate-800/80 text-slate-400" : "bg-white border-slate-200 text-slate-600"
         }`}
       >
         <div className="flex items-center gap-5">
@@ -1134,6 +1109,62 @@ ${previewRef.current.innerHTML}
           </span>
         </div>
       </footer>
+
+      {/* Drafts History Modal */}
+      {showDraftsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-200">
+          <div
+            className={`w-full max-w-lg p-6 rounded-2xl border shadow-2xl transition-all ${
+              isDark ? "bg-[#0f172a] border-slate-700 text-slate-100" : "bg-white border-slate-200 text-slate-900"
+            }`}
+          >
+            <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-700/50">
+              <div className="flex items-center gap-2">
+                <History className="w-5 h-5 text-indigo-400" />
+                <h3 className="text-base font-bold">LocalStorage Saved Drafts</h3>
+              </div>
+              <button
+                onClick={() => setShowDraftsModal(false)}
+                className={`p-1.5 rounded-lg transition-colors ${
+                  isDark ? "hover:bg-slate-800 text-slate-400" : "hover:bg-slate-100 text-slate-500"
+                }`}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="max-h-80 overflow-y-auto space-y-2 pr-1">
+              {draftHistory.length === 0 ? (
+                <div className="py-8 text-center text-slate-500 text-xs font-mono">No drafts saved yet.</div>
+              ) : (
+                draftHistory.map((draft) => (
+                  <div
+                    key={draft.id}
+                    className={`p-3 rounded-xl border flex items-center justify-between gap-3 text-xs transition-all ${
+                      isDark ? "bg-slate-900/80 border-slate-800 hover:border-slate-700" : "bg-slate-50 border-slate-200"
+                    }`}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[10px] font-mono text-slate-400 mb-1">{draft.timestamp}</div>
+                      <div className="font-mono text-slate-300 truncate">{draft.previewText}</div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setMarkdown(draft.fullText);
+                        setShowDraftsModal(false);
+                        showToast(`Restored draft from ${draft.timestamp}`);
+                      }}
+                      className="px-3 py-1.5 text-xs font-semibold bg-indigo-600 text-white rounded-lg hover:bg-indigo-500 shrink-0"
+                    >
+                      Restore
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Centered HTML Export Theme Modal */}
       {showHtmlThemeModal && (
@@ -1168,7 +1199,6 @@ ${previewRef.current.innerHTML}
             </div>
 
             <div className="grid grid-cols-2 gap-3.5 my-2">
-              {/* Light Theme Card */}
               <button
                 onClick={() => handleDownloadFile("html", "light")}
                 className={`group flex flex-col items-center gap-3 p-4 rounded-xl border text-center transition-all cursor-pointer ${
@@ -1190,7 +1220,6 @@ ${previewRef.current.innerHTML}
                 </div>
               </button>
 
-              {/* Dark Theme Card */}
               <button
                 onClick={() => handleDownloadFile("html", "dark")}
                 className={`group flex flex-col items-center gap-3 p-4 rounded-xl border text-center transition-all cursor-pointer ${

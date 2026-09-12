@@ -20,30 +20,59 @@ A modern, high-performance, and feature-rich **Markdown Editor & Previewer** bui
 
 - **⚡ Real-time Live Preview**: See your changes instantly as you type.
 - **🎨 GitHub Flavored Markdown**: Tables, task lists, strikethrough, and syntax highlighting.
-- **🛠️ Formatting Toolbar**: One-click formatting for headers, bold, italics, code, quotes, and more.
+- **📊 Diagrams & Math**: Mermaid.js sequence/flowchart diagrams and KaTeX formulas.
+- **🚨 Callouts & Alerts**: GitHub-style alert callouts (\`> [!NOTE]\`, \`> [!WARNING]\`).
 - **📁 Export & Copy**: Easily export your work to \`.md\` or \`.html\` files, or copy HTML/Markdown directly.
 - **📊 Document Statistics**: Live character count, word count, and estimated reading time.
-- **💾 Auto-Save**: Your work is automatically saved in your browser local storage!
+- **💾 Auto-Save & History**: Automatic browser draft saving with version history restoration.
+
+---
+
+## 💡 GitHub Callouts / Alerts
+
+> [!NOTE]
+> This is a useful note alert to highlight important information.
+
+> [!TIP]
+> Pro-tip: You can drag and drop any \`.md\` file or paste images directly (\`Ctrl + V\`)!
+
+> [!IMPORTANT]
+> Always review your exported documents before publishing.
+
+> [!WARNING]
+> Keep a backup of critical files before overwriting.
+
+> [!CAUTION]
+> Proceed with caution when performing high-risk actions.
+
+---
+
+## 🧮 KaTeX Math Expression
+
+Inline math: $E = mc^2$ and Euler's identity $e^{i\\pi} + 1 = 0$.
+
+Block math formula:
+$$
+\\int_{-\\infty}^{\\infty} e^{-x^2} dx = \\sqrt{\\pi}
+$$
+
+---
+
+## 📊 Mermaid.js Diagram
+
+\`\`\`mermaid
+flowchart TD
+    A[Start Editor] --> B{Draft Exists?}
+    B -- Yes --> C[Restore from LocalStorage]
+    B -- No --> D[Load Default Welcome Template]
+    C --> E[Edit & Live Preview]
+    D --> E
+    E --> F[Auto-Save Draft & History]
+\`\`\`
 
 ---
 
 ## 📝 Markdown Syntax Examples
-
-### Typography & Formatting
-
-You can make text **bold**, *italic*, ~~strikethrough~~, or \`inline code\`.
-
-> "Markdown is a lightweight markup language with plain text formatting syntax." 
-> — *John Gruber*
-
-### Task List
-
-- [x] Create a sleek Markdown Previewer
-- [x] Add GitHub Flavored Markdown support
-- [x] Implement theme switcher & export functionality
-- [ ] Share with friends!
-
----
 
 ### Code Syntax Highlighting
 
@@ -61,23 +90,80 @@ function greetUser(user: User): string {
 console.log(greetUser({ id: 1, name: "Woradet", role: "admin" }));
 \`\`\`
 
----
-
 ### Tables
 
 | Feature | Support | Performance |
 | :--- | :---: | ---: |
 | GFM Syntax | ✅ Yes | Extremely Fast |
-| Syntax Highlighting | ✅ Yes | Instant |
+| Diagrams & Math | ✅ Yes | Instant |
 | PDF/HTML Export | ✅ Yes | 100% Client-side |
+`
+  },
+  {
+    id: "mermaid",
+    name: "📊 Mermaid Diagrams",
+    description: "Flowcharts, Sequence Diagrams, and Class Diagrams using Mermaid.js",
+    content: `# Mermaid.js Diagrams & Charts
 
----
+## 1. Flowchart Diagram
 
-### Image Example
+\`\`\`mermaid
+graph TD
+    User[User Input] -->|Types Markdown| Editor[Text Area Editor]
+    Editor -->|Triggers Auto-Save| Storage[(LocalStorage)]
+    Editor -->|Parses AST| Renderer[React Markdown]
+    Renderer -->|KaTeX| Math[Math Renderer]
+    Renderer -->|Mermaid| Chart[Mermaid Renderer]
+    Chart --> Output[Live Preview UI]
+\`\`\`
 
-![Unsplash Landscape](https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80)
+## 2. Sequence Diagram
 
-*Enjoy creating beautiful documentation with Markdown!*
+\`\`\`mermaid
+sequenceDiagram
+    autonumber
+    actor User
+    participant WebApp as Web Interface
+    participant API as GET /api/templates
+    
+    User->>WebApp: Click "Load Template"
+    WebApp->>API: Request JSON templates
+    API-->>WebApp: Return templates array
+    WebApp-->>User: Populate Editor with content
+\`\`\`
+
+## 3. State Diagram
+
+\`\`\`mermaid
+stateDiagram-v2
+    [*] --> Idle
+    Idle --> Editing: User types text
+    Editing --> AutoSaving: 2s Timer Triggered
+    AutoSaving --> Idle: Saved to LocalStorage
+\`\`\`
+`
+  },
+  {
+    id: "math",
+    name: "🧮 KaTeX Math Equations",
+    description: "Mathematical equations and scientific notations using KaTeX",
+    content: `# Mathematical Expressions with KaTeX
+
+## Inline Math
+
+Einstein's mass-energy equivalence formula is $E = mc^2$.
+The Pythagorean theorem states that $a^2 + b^2 = c^2$.
+The limit definition of derivative is $f'(x) = \\lim_{h \\to 0} \\frac{f(x+h) - f(x)}{h}$.
+
+## Block Equations
+
+$$
+x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}
+$$
+
+$$
+\\int_{-\\infty}^{\\infty} e^{-x^2} dx = \\sqrt{\\pi}
+$$
 `
   },
   {
@@ -89,43 +175,13 @@ console.log(greetUser({ id: 1, name: "Woradet", role: "admin" }));
 > A short, catchy description of what this awesome project does.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)]()
 
 ## ⚡ Quick Start
 
-### Prerequisites
-
-Make sure you have Node.js 18+ installed on your machine.
-
 \`\`\`bash
-node -v
+npm install
+npm run dev
 \`\`\`
-
-### Installation
-
-1. Clone the repository
-   \`\`\`bash
-   git clone https://github.com/username/project-name.git
-   \`\`\`
-2. Install dependencies
-   \`\`\`bash
-   npm install
-   \`\`\`
-3. Run dev server
-   \`\`\`bash
-   npm run dev
-   \`\`\`
-
-## 🛠️ Tech Stack
-
-- **Framework**: Next.js (App Router)
-- **Styling**: Tailwind CSS
-- **Icons**: Lucide React
-- **Language**: TypeScript
-
-## 📄 License
-
-Distributed under the MIT License. See \`LICENSE\` for more information.
 `
   },
   {
@@ -136,49 +192,12 @@ Distributed under the MIT License. See \`LICENSE\` for more information.
 
 # Heading 1
 ## Heading 2
-### Heading 3
-#### Heading 4
 
-## Emphasis
+> [!NOTE]
+> Useful information note.
 
-*Italic text* or _Italic text_
-**Bold text** or __Bold text__
-***Bold & Italic***
-~~Strikethrough~~
-
-## Lists
-
-### Unordered List
-- Item 1
-- Item 2
-  - Sub-item 2a
-  - Sub-item 2b
-
-### Ordered List
-1. First item
-2. Second item
-3. Third item
-
-## Links & Images
-
-[Google Search](https://google.com)
-![Sample Image](https://picsum.photos/300/200)
-
-## Blockquotes
-
-> Single line blockquote
->
-> Multi-line blockquote with continuous syntax
-
-## Code
-
-Inline \`code\` element.
-
-Code block:
-\`\`\`javascript
-const message = "Hello World";
-console.log(message);
-\`\`\`
+> [!WARNING]
+> Warning alert block.
 `
   }
 ];

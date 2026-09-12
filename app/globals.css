@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "highlight.js/styles/tokyo-night-dark.css";
+@import "katex/dist/katex.min.css";
 
 @layer base {
   :root {
@@ -334,3 +335,72 @@
   margin: 1.25rem 0;
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
+
+/* GitHub Callout / Alert Styles */
+.markdown-alert {
+  padding: 0.85rem 1.15rem;
+  margin: 1.25rem 0;
+  border-left: 4px solid;
+  border-radius: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.markdown-alert .markdown-alert-title {
+  display: flex;
+  items-center: center;
+  gap: 0.4rem;
+  font-weight: 700;
+  margin-bottom: 0.4rem;
+  text-transform: capitalize;
+}
+
+/* NOTE Alert */
+.markdown-alert-note {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: #3b82f6;
+  color: #93c5fd;
+}
+.markdown-alert-note .markdown-alert-title {
+  color: #60a5fa;
+}
+
+/* TIP Alert */
+.markdown-alert-tip {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: #10b981;
+  color: #6ee7b7;
+}
+.markdown-alert-tip .markdown-alert-title {
+  color: #34d399;
+}
+
+/* IMPORTANT Alert */
+.markdown-alert-important {
+  background: rgba(168, 85, 247, 0.1);
+  border-color: #a855f7;
+  color: #d8b4fe;
+}
+.markdown-alert-important .markdown-alert-title {
+  color: #c084fc;
+}
+
+/* WARNING Alert */
+.markdown-alert-warning {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: #f59e0b;
+  color: #fde68a;
+}
+.markdown-alert-warning .markdown-alert-title {
+  color: #fbbf24;
+}
+
+/* CAUTION Alert */
+.markdown-alert-caution {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: #ef4444;
+  color: #fca5a5;
+}
+.markdown-alert-caution .markdown-alert-title {
+  color: #f87171;
+}
+
