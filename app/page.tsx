@@ -590,7 +590,7 @@ ${previewRef.current.innerHTML}
 
           {/* Auto Save Badge */}
           <div className="flex items-center gap-1.5 text-xs font-mono px-2.5 py-1 rounded-lg bg-slate-800/50 border border-slate-700/60 text-slate-300">
-            <Save className={`w-3.5 h-3.5 ${autoSaveStatus === "Saving..." ? "text-amber-400 animate-spin" : "text-emerald-400"}`} />
+            <Save className={`w-3.5 h-3.5 ${autoSaveStatus === "Saving..." ? "text-amber-400" : "text-emerald-400"}`} />
             <span className="hidden xs:inline">{autoSaveStatus}</span>
           </div>
 
