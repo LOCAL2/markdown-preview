@@ -1111,29 +1111,37 @@ ${previewRef.current.innerHTML}
                     },
                     blockquote({ children, ...props }: any) {
                       // Detect GitHub Callout Alerts (> [!NOTE], > [!TIP], > [!IMPORTANT], > [!WARNING], > [!CAUTION])
-                      const childrenArray = React.Children.toArray(children);
                       let alertType: string | null = null;
+                      let cleanChildren = children;
 
+                      const childrenArray = React.Children.toArray(children);
                       if (childrenArray.length > 0) {
                         const firstChild: any = childrenArray[0];
                         if (firstChild && firstChild.props && firstChild.props.children) {
-                          const text = String(firstChild.props.children);
-                          const match = text.match(/^\[\!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]/i);
-                          if (match) {
-                            alertType = match[1].toLowerCase();
+                          const innerArray = React.Children.toArray(firstChild.props.children);
+                          if (innerArray.length > 0) {
+                            const firstText = String(innerArray[0]);
+                            const match = firstText.match(/^\[\!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*/i);
+                            if (match) {
+                              alertType = match[1].toLowerCase();
+                              const strippedText = firstText.replace(/^\[\!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*/i, "");
+                              const newInner = [strippedText, ...innerArray.slice(1)];
+                              const newFirstChild = React.cloneElement(firstChild, { ...firstChild.props, children: newInner });
+                              cleanChildren = [newFirstChild, ...childrenArray.slice(1)];
+                            }
                           }
                         }
                       }
 
                       if (alertType) {
                         return (
-                          <div className={`markdown-alert markdown-alert-${alertType}`}>
+                          <blockquote className={`markdown-alert markdown-alert-${alertType}`} {...props}>
                             <div className="markdown-alert-title font-bold text-xs uppercase flex items-center gap-1.5 mb-1">
-                              <AlertCircle className="w-4 h-4" />
-                              {alertType}
+                              <AlertCircle className="w-4 h-4 shrink-0" />
+                              <span>{alertType}</span>
                             </div>
-                            <div className="markdown-alert-content">{children}</div>
-                          </div>
+                            <div className="markdown-alert-content font-normal not-italic">{cleanChildren}</div>
+                          </blockquote>
                         );
                       }
 
