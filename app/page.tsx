@@ -799,33 +799,35 @@ ${previewRef.current.innerHTML}
 
             {showTemplatesDropdown && (
               <div
-                className={`absolute right-0 top-full mt-1.5 w-64 max-h-80 overflow-y-auto rounded-xl border shadow-2xl py-1.5 z-50 animate-in fade-in zoom-in-95 ${
+                className={`absolute right-0 top-full mt-1.5 w-64 max-h-72 overflow-y-auto rounded-xl border shadow-2xl py-1.5 z-50 animate-in fade-in duration-100 ${
                   isDark
                     ? "bg-[#0f172a] border-slate-700 text-slate-100 shadow-black/80"
                     : "bg-white border-slate-200 text-slate-900 shadow-slate-400/50"
                 }`}
               >
-                <div className="sticky top-0 px-3 py-1.5 text-[10px] font-mono uppercase tracking-wider text-slate-400 border-b border-slate-700/50 backdrop-blur-md bg-inherit">
+                <div className="sticky top-0 px-3.5 py-1.5 text-[10px] font-mono uppercase tracking-wider text-slate-400 border-b border-slate-700/50 backdrop-blur-md bg-inherit z-10">
                   Select Preset Template
                 </div>
-                {SAMPLE_TEMPLATES.map((tmpl) => (
-                  <button
-                    key={tmpl.id}
-                    onClick={() => {
-                      setMarkdown(tmpl.content);
-                      setShowTemplatesDropdown(false);
-                      showToast(`Loaded "${tmpl.name}" template`);
-                    }}
-                    className={`w-full text-left px-3.5 py-2 text-xs transition-colors flex flex-col gap-0.5 ${
-                      isDark
-                        ? "hover:bg-slate-800/80 text-slate-200 hover:text-cyan-400"
-                        : "hover:bg-slate-100 text-slate-800 hover:text-cyan-600"
-                    }`}
-                  >
-                    <span className="font-bold">{tmpl.name}</span>
-                    <span className="text-[11px] text-slate-400 truncate">{tmpl.description}</span>
-                  </button>
-                ))}
+                <div className="py-0.5">
+                  {SAMPLE_TEMPLATES.map((tmpl) => (
+                    <button
+                      key={tmpl.id}
+                      onClick={() => {
+                        setMarkdown(tmpl.content);
+                        setShowTemplatesDropdown(false);
+                        showToast(`Loaded "${tmpl.name}" template`);
+                      }}
+                      className={`w-full text-left px-3.5 py-2 text-xs transition-colors flex flex-col gap-0.5 ${
+                        isDark
+                          ? "hover:bg-slate-800/80 text-slate-200 hover:text-cyan-400"
+                          : "hover:bg-slate-100 text-slate-800 hover:text-cyan-600"
+                      }`}
+                    >
+                      <span className="font-bold">{tmpl.name}</span>
+                      <span className="text-[11px] text-slate-400 truncate">{tmpl.description}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </div>
