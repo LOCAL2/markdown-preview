@@ -1017,13 +1017,15 @@ ${previewRef.current.innerHTML}
               />
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors ${
-                  isDark ? "hover:bg-slate-800 text-slate-400 hover:text-white" : "hover:bg-slate-200 text-slate-600"
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all ${
+                  isDark
+                    ? "bg-indigo-500/10 border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/20"
+                    : "bg-indigo-50 border-indigo-200 text-indigo-600 hover:bg-indigo-100"
                 }`}
-                title="Open local .md or .txt file"
+                title="Open / Import local .md or .txt file"
               >
                 <Upload className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Open File</span>
+                <span>Open File</span>
               </button>
             </div>
 
