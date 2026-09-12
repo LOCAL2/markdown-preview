@@ -420,6 +420,19 @@ export default function MarkdownPreviewer() {
     }, 0);
   };
 
+  const handleDeleteDraft = (id: string) => {
+    const updated = draftHistory.filter((d) => d.id !== id);
+    setDraftHistory(updated);
+    localStorage.setItem("markdown_preview_drafts_history", JSON.stringify(updated));
+    showToast("Deleted draft snapshot");
+  };
+
+  const handleClearAllDrafts = () => {
+    setDraftHistory([]);
+    localStorage.removeItem("markdown_preview_drafts_history");
+    showToast("Cleared all saved drafts");
+  };
+
   const handleCopyMarkdown = () => {
     navigator.clipboard.writeText(markdown);
     setCopiedMd(true);
@@ -1169,14 +1182,26 @@ ${previewRef.current.innerHTML}
                 <History className="w-5 h-5 text-indigo-400" />
                 <h3 className="text-base font-bold">LocalStorage Saved Drafts</h3>
               </div>
-              <button
-                onClick={() => setShowDraftsModal(false)}
-                className={`p-1.5 rounded-lg transition-colors ${
-                  isDark ? "hover:bg-slate-800 text-slate-400" : "hover:bg-slate-100 text-slate-500"
-                }`}
-              >
-                <X className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-2">
+                {draftHistory.length > 0 && (
+                  <button
+                    onClick={handleClearAllDrafts}
+                    className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 transition-all"
+                    title="Clear All Saved Draft Snapshots"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Clear All</span>
+                  </button>
+                )}
+                <button
+                  onClick={() => setShowDraftsModal(false)}
+                  className={`p-1.5 rounded-lg transition-colors ${
+                    isDark ? "hover:bg-slate-800 text-slate-400" : "hover:bg-slate-100 text-slate-500"
+                  }`}
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
             <div className="max-h-80 overflow-y-auto space-y-2 pr-1">
@@ -1194,16 +1219,29 @@ ${previewRef.current.innerHTML}
                       <div className="text-[10px] font-mono text-slate-400 mb-1">{draft.timestamp}</div>
                       <div className="font-mono text-slate-300 truncate">{draft.previewText}</div>
                     </div>
-                    <button
-                      onClick={() => {
-                        setMarkdown(draft.fullText);
-                        setShowDraftsModal(false);
-                        showToast(`Restored draft from ${draft.timestamp}`);
-                      }}
-                      className="px-3 py-1.5 text-xs font-semibold bg-indigo-600 text-white rounded-lg hover:bg-indigo-500 shrink-0"
-                    >
-                      Restore
-                    </button>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        onClick={() => {
+                          setMarkdown(draft.fullText);
+                          setShowDraftsModal(false);
+                          showToast(`Restored draft from ${draft.timestamp}`);
+                        }}
+                        className="px-3 py-1.5 text-xs font-semibold bg-indigo-600 text-white rounded-lg hover:bg-indigo-500 transition-colors"
+                      >
+                        Restore
+                      </button>
+                      <button
+                        onClick={() => handleDeleteDraft(draft.id)}
+                        className={`p-1.5 rounded-lg transition-all border ${
+                          isDark
+                            ? "border-slate-800 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 hover:border-rose-500/30"
+                            : "border-slate-200 text-slate-500 hover:text-rose-600 hover:bg-rose-50"
+                        }`}
+                        title="Delete this draft"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 ))
               )}
