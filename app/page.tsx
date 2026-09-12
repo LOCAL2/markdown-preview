@@ -90,29 +90,11 @@ const CALLOUT_CONFIG: Record<
   },
 };
 
-function hasExistingCallout(node: any): boolean {
-  if (!node) return false;
-  if (typeof node === "object" && node.props) {
-    if (node.props["data-callout"] === "true") return true;
-    if (node.props.children) {
-      if (Array.isArray(node.props.children)) {
-        return node.props.children.some(hasExistingCallout);
-      }
-      return hasExistingCallout(node.props.children);
-    }
-  }
-  if (Array.isArray(node)) {
-    return node.some(hasExistingCallout);
-  }
-  return false;
-}
-
 function renderCalloutAlert(alertType: string, content: React.ReactNode) {
   const config = CALLOUT_CONFIG[alertType] || CALLOUT_CONFIG.note;
 
   return (
     <div
-      data-callout="true"
       className={`my-4 p-4 border-l-4 rounded-r-xl shadow-md font-sans text-sm ${config.bg} ${config.border} ${config.text}`}
     >
       <div className={`font-bold text-xs uppercase flex items-center gap-1.5 mb-1.5 ${config.title}`}>
@@ -125,10 +107,6 @@ function renderCalloutAlert(alertType: string, content: React.ReactNode) {
 }
 
 function processCalloutChildren(children: React.ReactNode): { alertType: string | null; cleanContent: React.ReactNode } {
-  if (hasExistingCallout(children)) {
-    return { alertType: null, cleanContent: children };
-  }
-
   let alertType: string | null = null;
   let cleanContent = children;
 
@@ -1230,17 +1208,7 @@ ${previewRef.current.innerHTML}
                         </code>
                       );
                     },
-                    p({ children, ...props }: any) {
-                      const { alertType, cleanContent } = processCalloutChildren(children);
-                      if (alertType) {
-                        return renderCalloutAlert(alertType, cleanContent);
-                      }
-                      return <p {...props}>{children}</p>;
-                    },
                     blockquote({ children, ...props }: any) {
-                      if (hasExistingCallout(children)) {
-                        return <>{children}</>;
-                      }
                       const { alertType, cleanContent } = processCalloutChildren(children);
                       if (alertType) {
                         return renderCalloutAlert(alertType, cleanContent);
