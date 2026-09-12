@@ -799,13 +799,13 @@ ${previewRef.current.innerHTML}
 
             {showTemplatesDropdown && (
               <div
-                className={`absolute right-0 mt-2 w-64 rounded-xl border shadow-2xl py-1.5 z-50 animate-in fade-in zoom-in-95 ${
+                className={`absolute right-0 top-full mt-1.5 w-64 max-h-80 overflow-y-auto rounded-xl border shadow-2xl py-1.5 z-50 animate-in fade-in zoom-in-95 ${
                   isDark
-                    ? "bg-[#0f172a] border-slate-700 text-slate-100"
-                    : "bg-white border-slate-200 text-slate-900"
+                    ? "bg-[#0f172a] border-slate-700 text-slate-100 shadow-black/80"
+                    : "bg-white border-slate-200 text-slate-900 shadow-slate-400/50"
                 }`}
               >
-                <div className="px-3 py-1.5 text-[10px] font-mono uppercase tracking-wider text-slate-400 border-b border-slate-700/50">
+                <div className="sticky top-0 px-3 py-1.5 text-[10px] font-mono uppercase tracking-wider text-slate-400 border-b border-slate-700/50 backdrop-blur-md bg-inherit">
                   Select Preset Template
                 </div>
                 {SAMPLE_TEMPLATES.map((tmpl) => (
