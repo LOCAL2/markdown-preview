@@ -8,27 +8,27 @@ export interface Template {
 export const SAMPLE_TEMPLATES: Template[] = [
   {
     id: "welcome",
-    name: "🚀 Welcome & Features",
+    name: "Welcome & Features",
     description: "Overview of markdown syntax and previewer features",
-    content: `# Welcome to Markdown Live Previewer 🚀
+    content: `# Welcome to Markdown Live Previewer
 
 A modern, high-performance, and feature-rich **Markdown Editor & Previewer** built with **Next.js** and **Tailwind CSS**.
 
 ---
 
-## 🌟 Key Features
+## Key Features
 
-- **⚡ Real-time Live Preview**: See your changes instantly as you type.
-- **🎨 GitHub Flavored Markdown**: Tables, task lists, strikethrough, and syntax highlighting.
-- **📊 Diagrams & Math**: Mermaid.js sequence/flowchart diagrams and KaTeX formulas.
-- **🚨 Callouts & Alerts**: GitHub-style alert callouts (\`> [!NOTE]\`, \`> [!WARNING]\`).
-- **📁 Export & Copy**: Easily export your work to \`.md\` or \`.html\` files, or copy HTML/Markdown directly.
-- **📊 Document Statistics**: Live character count, word count, and estimated reading time.
-- **💾 Auto-Save & History**: Automatic browser draft saving with version history restoration.
+- **Real-time Live Preview**: See your changes instantly as you type.
+- **GitHub Flavored Markdown**: Tables, task lists, strikethrough, and syntax highlighting.
+- **Diagrams & Math**: Mermaid.js sequence/flowchart diagrams and KaTeX formulas.
+- **Callouts & Alerts**: GitHub-style alert callouts (\`> [!NOTE]\`, \`> [!WARNING]\`).
+- **Export & Copy**: Easily export your work to \`.md\` or \`.html\` files, or copy HTML/Markdown directly.
+- **Document Statistics**: Live character count, word count, and estimated reading time.
+- **Auto-Save & History**: Automatic browser draft saving with version history restoration.
 
 ---
 
-## 💡 GitHub Callouts / Alerts
+## GitHub Callouts / Alerts
 
 > [!NOTE]
 > This is a useful note alert to highlight important information.
@@ -47,7 +47,7 @@ A modern, high-performance, and feature-rich **Markdown Editor & Previewer** bui
 
 ---
 
-## 🧮 KaTeX Math Expression
+## KaTeX Math Expression
 
 Inline math: $E = mc^2$ and Euler's identity $e^{i\\pi} + 1 = 0$.
 
@@ -58,7 +58,7 @@ $$
 
 ---
 
-## 📊 Mermaid.js Diagram
+## Mermaid.js Diagram
 
 \`\`\`mermaid
 flowchart TD
@@ -72,7 +72,7 @@ flowchart TD
 
 ---
 
-## 📝 Markdown Syntax Examples
+## Markdown Syntax Examples
 
 ### Code Syntax Highlighting
 
@@ -94,14 +94,14 @@ console.log(greetUser({ id: 1, name: "Woradet", role: "admin" }));
 
 | Feature | Support | Performance |
 | :--- | :---: | ---: |
-| GFM Syntax | ✅ Yes | Extremely Fast |
-| Diagrams & Math | ✅ Yes | Instant |
-| PDF/HTML Export | ✅ Yes | 100% Client-side |
+| GFM Syntax | Yes | Extremely Fast |
+| Diagrams & Math | Yes | Instant |
+| PDF/HTML Export | Yes | 100% Client-side |
 `
   },
   {
     id: "mermaid",
-    name: "📊 Mermaid Diagrams",
+    name: "Mermaid Diagrams",
     description: "Flowcharts, Sequence Diagrams, and Class Diagrams using Mermaid.js",
     content: `# Mermaid.js Diagrams & Charts
 
@@ -145,7 +145,7 @@ stateDiagram-v2
   },
   {
     id: "math",
-    name: "🧮 KaTeX Math Equations",
+    name: "KaTeX Math Equations",
     description: "Mathematical equations and scientific notations using KaTeX",
     content: `# Mathematical Expressions with KaTeX
 
@@ -168,7 +168,7 @@ $$
   },
   {
     id: "readme",
-    name: "📄 Project README",
+    name: "Project README",
     description: "Standard GitHub repository README template",
     content: `# Project Name
 
@@ -176,7 +176,7 @@ $$
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## ⚡ Quick Start
+## Quick Start
 
 \`\`\`bash
 npm install
@@ -186,7 +186,7 @@ npm run dev
   },
   {
     id: "cheatsheet",
-    name: "💡 Markdown Cheatsheet",
+    name: "Markdown Cheatsheet",
     description: "Quick reference guide for Markdown syntax",
     content: `# Markdown Cheatsheet
 

@@ -332,7 +332,7 @@ export default function MarkdownPreviewer() {
             const imageMarkdown = `\n![Pasted Image](${base64Url})\n`;
             const updated = markdown.substring(0, start) + imageMarkdown + markdown.substring(end);
             setMarkdown(updated);
-            showToast("📷 Image pasted and converted to Base64!");
+            showToast("Image pasted and converted to Base64!");
 
             setTimeout(() => {
               textarea.focus();
@@ -356,7 +356,7 @@ export default function MarkdownPreviewer() {
         const text = e.target?.result as string;
         if (text !== undefined) {
           setMarkdown(text);
-          showToast(`📄 Loaded file: ${file.name}`);
+          showToast(`Loaded file: ${file.name}`);
         }
       };
       reader.readAsText(file);
@@ -917,7 +917,7 @@ ${previewRef.current.innerHTML}
                   className={`p-1.5 rounded-md transition-all ${isDark ? "hover:bg-slate-800 text-amber-400" : "hover:bg-slate-200 text-amber-600"}`}
                   title="Insert Mermaid Diagram"
                 >
-                  <span className="font-mono font-bold text-xs">📊</span>
+                  <Layers className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => insertFormat("[", "](https://example.com)", "link text")}
