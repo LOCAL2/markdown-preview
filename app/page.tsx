@@ -7,6 +7,7 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeHighlight from "rehype-highlight";
 import rehypeKatex from "rehype-katex";
+import MermaidRenderer from "./components/MermaidRenderer";
 
 import {
   Bold,
@@ -1208,8 +1209,21 @@ ${previewRef.current.innerHTML}
                   rehypePlugins={[rehypeHighlight, rehypeKatex]}
                   components={{
                     img({ node, src, alt, ...props }: any) {
-                      if (!src) return null;
-                      return <img src={src} alt={alt || ""} {...props} />;
+                      const cleanSrc = typeof src === "string" ? src.trim().replace(/\s+/g, "") : "";
+                      if (!cleanSrc) return null;
+                      return (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img
+                          src={cleanSrc}
+                          alt={alt || "Image"}
+                          className="max-w-full h-auto rounded-xl shadow-md my-4 inline-block"
+                          onError={(e) => {
+                            // If base64 or URL fails to render, show placeholder gracefully
+                            (e.target as HTMLElement).style.display = "none";
+                          }}
+                          {...props}
+                        />
+                      );
                     },
                     code({ node, inline, className, children, ...props }: any) {
                       const match = /language-(\w+)/.exec(className || "");
