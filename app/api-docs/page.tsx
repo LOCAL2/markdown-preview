@@ -143,6 +143,50 @@ export default function ApiDocsPage() {
             </div>
           ))}
         </div>
+
+        {/* Preset Templates Catalog Section */}
+        <div className="space-y-4 pt-4 border-t border-slate-800">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-bold text-white flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+              Available Preset Templates Catalog
+            </h2>
+            <span className="text-xs font-mono text-slate-400">5 Presets</span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[
+              { id: "welcome", name: "🌟 Welcome & Feature Tour", desc: "Comprehensive guide featuring Callouts, Code Blocks, Math & Tables" },
+              { id: "mermaid", name: "📊 Mermaid Diagrams Showcase", desc: "Flowcharts, Sequence Diagrams, Gantt Charts & Mindmaps" },
+              { id: "math", name: "📐 KaTeX Math Formulas & Science", desc: "Calculus, Physics, Matrix & Linear Algebra TeX notation" },
+              { id: "readme", name: "🚀 Professional Project README", desc: "Production-ready open source GitHub repository template" },
+              { id: "cheatsheet", name: "📝 Complete Markdown Cheatsheet", desc: "Quick reference guide for all standard Markdown syntax" },
+            ].map((tmpl) => (
+              <div key={tmpl.id} className="p-4 bg-slate-900/80 border border-slate-800 rounded-xl space-y-3 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <h3 className="text-sm font-bold text-slate-100">{tmpl.name}</h3>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                      ID: {tmpl.id}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400">{tmpl.desc}</p>
+                </div>
+                <div className="flex items-center gap-2 pt-2 border-t border-slate-800/60 font-mono text-xs">
+                  <a
+                    href={`${origin}/api/templates?id=${tmpl.id}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex-1 py-1.5 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-indigo-300 hover:text-white text-center transition-colors flex items-center justify-center gap-1 text-[11px]"
+                  >
+                    <span>View JSON Data</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
