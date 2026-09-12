@@ -1153,7 +1153,7 @@ ${previewRef.current.innerHTML}
                 onMouseLeave={handleScrollEnd}
                 onTouchEnd={handleScrollEnd}
                 placeholder="Type your markdown here... (Drag & drop files or Ctrl+V paste images supported)"
-                className={`w-full flex-1 p-5 bg-transparent font-mono text-sm resize-none focus:outline-none leading-relaxed tracking-wide ${
+                className={`w-full flex-1 p-5 bg-transparent font-mono text-sm resize-none focus:outline-none leading-relaxed tracking-wide overflow-y-scroll ${
                   isDark
                     ? "text-slate-200 selection:bg-cyan-500/30 selection:text-cyan-200"
                     : "text-slate-800 selection:bg-cyan-200 selection:text-cyan-900"
@@ -1203,7 +1203,7 @@ ${previewRef.current.innerHTML}
               onScroll={handlePreviewScroll}
               onMouseLeave={handleScrollEnd}
               onTouchEnd={handleScrollEnd}
-              className={`flex-1 p-6 md:p-8 overflow-y-auto ${isDark ? "bg-[#0b0f17]" : "bg-slate-50"}`}
+              className={`flex-1 p-6 md:p-8 overflow-y-scroll ${isDark ? "bg-[#0b0f17]" : "bg-slate-50"}`}
             >
               <div ref={previewRef} className="markdown-body max-w-none">
                 <ReactMarkdown
