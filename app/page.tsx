@@ -366,18 +366,25 @@ export default function MarkdownPreviewer() {
   };
 
   const handleFileDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDraggingFile(false);
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      handleFileUpload(e.dataTransfer.files[0]);
+    const types = Array.from(e.dataTransfer.types || []);
+    if (types.includes("Files")) {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDraggingFile(false);
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        handleFileUpload(e.dataTransfer.files[0]);
+      }
     }
   };
 
   const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!isDraggingFile) setIsDraggingFile(true);
+    // Only activate file drop overlay if dragging external OS files (not internal text selection)
+    const types = Array.from(e.dataTransfer.types || []);
+    if (types.includes("Files")) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!isDraggingFile) setIsDraggingFile(true);
+    }
   };
 
   const handleDragLeave = (e: React.DragEvent) => {

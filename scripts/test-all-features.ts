@@ -104,6 +104,11 @@ async function runTests() {
   const isValidFile = validFileExtensions.some((ext) => testFileName.endsWith(ext));
   assert(isValidFile, "File upload extension validation accepts .md files");
 
+  const textDragTypes = ["text/plain", "text/html"];
+  const fileDragTypes = ["Files"];
+  assert(!textDragTypes.includes("Files"), "Internal text drag selection is correctly ignored by file drop handler");
+  assert(fileDragTypes.includes("Files"), "External OS file drag is correctly accepted by file drop handler");
+
   // Summary
   console.log("\n=======================================================");
   console.log(`📊 TEST RESULTS: ${passed} PASSED, ${failed} FAILED`);
