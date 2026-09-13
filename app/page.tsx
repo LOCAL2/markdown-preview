@@ -708,7 +708,7 @@ ${previewRef.current.innerHTML}
 
   return (
     <div
-      className={`theme-${theme} flex flex-col h-screen overflow-hidden ${
+      className={`theme-${theme} flex flex-col min-h-screen ${
         isDark ? "bg-[#0b0f17] text-slate-100" : "bg-slate-50 text-slate-900"
       }`}
     >
@@ -944,7 +944,7 @@ ${previewRef.current.innerHTML}
       </header>
 
       {/* Main Workspace */}
-      <main className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
+      <main className="flex-1 flex flex-col md:flex-row overflow-hidden relative min-h-[calc(100vh-100px)]">
         {/* Left Pane: Editor */}
         {(viewMode === "split" || viewMode === "editor") && (
           <div
