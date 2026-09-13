@@ -708,7 +708,7 @@ ${previewRef.current.innerHTML}
 
   return (
     <div
-      className={`theme-${theme} flex flex-col min-h-screen ${
+      className={`theme-${theme} flex flex-col h-screen overflow-hidden ${
         isDark ? "bg-[#0b0f17] text-slate-100" : "bg-slate-50 text-slate-900"
       }`}
     >
@@ -944,7 +944,7 @@ ${previewRef.current.innerHTML}
       </header>
 
       {/* Main Workspace */}
-      <main className="flex-1 flex flex-col md:flex-row overflow-hidden relative min-h-[calc(100vh-100px)]">
+      <main className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
         {/* Left Pane: Editor */}
         {(viewMode === "split" || viewMode === "editor") && (
           <div
@@ -1454,101 +1454,6 @@ ${previewRef.current.innerHTML}
           </div>
         </div>
       )}
-
-      {/* SEO Optimized FAQ & Keyword Content Section */}
-      <footer className={`border-t py-12 px-6 ${isDark ? "bg-[#0b0f19] border-slate-800 text-slate-400" : "bg-slate-50 border-slate-200 text-slate-600"}`}>
-        <div className="max-w-6xl mx-auto space-y-10">
-          <div className="text-center space-y-3">
-            <h2 className={`text-2xl md:text-3xl font-extrabold ${isDark ? "text-slate-100" : "text-slate-900"}`}>
-              The Premier Free Online Real-time Markdown Editor & Live Previewer
-            </h2>
-            <p className="max-w-3xl mx-auto text-sm md:text-base leading-relaxed">
-              <strong>Markdown Barron</strong> is built for developers, technical writers, and students looking for a lightning-fast, privacy-first **Markdown editor**. Create, edit, render Mermaid diagrams, build KaTeX math formulas, and share GitHub-style documents instantly without registering or using servers.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-6 text-sm">
-            <div className={`p-5 rounded-2xl border ${isDark ? "bg-slate-900/50 border-slate-800" : "bg-white border-slate-200 shadow-sm"}`}>
-              <h3 className={`font-bold text-base mb-2 flex items-center gap-2 ${isDark ? "text-cyan-400" : "text-cyan-600"}`}>
-                <Zap className="w-4 h-4" /> Instant Hash URL Sharing
-              </h3>
-              <p className="leading-relaxed">
-                Share your documents with complete privacy. Our client-side LZ-String URL hash encoding allows zero-server, zero-database document sharing with lightweight compressed links.
-              </p>
-            </div>
-
-            <div className={`p-5 rounded-2xl border ${isDark ? "bg-slate-900/50 border-slate-800" : "bg-white border-slate-200 shadow-sm"}`}>
-              <h3 className={`font-bold text-base mb-2 flex items-center gap-2 ${isDark ? "text-indigo-400" : "text-indigo-600"}`}>
-                <Sparkles className="w-4 h-4" /> GitHub Callouts & Diagrams
-              </h3>
-              <p className="leading-relaxed">
-                Render GitHub Flavored Markdown alerts (<code className="text-xs px-1 py-0.5 rounded bg-indigo-500/10">[!NOTE]</code>, <code className="text-xs px-1 py-0.5 rounded bg-indigo-500/10">[!TIP]</code>) and rich Mermaid.js flowcharts, sequence diagrams, and architecture maps natively.
-              </p>
-            </div>
-
-            <div className={`p-5 rounded-2xl border ${isDark ? "bg-slate-900/50 border-slate-800" : "bg-white border-slate-200 shadow-sm"}`}>
-              <h3 className={`font-bold text-base mb-2 flex items-center gap-2 ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>
-                <FileCode className="w-4 h-4" /> KaTeX Math & Clean Export
-              </h3>
-              <p className="leading-relaxed">
-                Write complex mathematical expressions using LaTeX / KaTeX delimiters (<code className="text-xs px-1 py-0.5 rounded bg-emerald-500/10">$...$</code>) and export your work to standalone styled HTML or raw Markdown files with one click.
-              </p>
-            </div>
-          </div>
-
-          <div className="border-t border-slate-800/50 pt-8">
-            <h3 className={`text-xl font-bold mb-6 text-center ${isDark ? "text-slate-200" : "text-slate-800"}`}>
-              Frequently Asked Questions (FAQ)
-            </h3>
-            <div className="grid md:grid-cols-2 gap-6 text-sm">
-              <div className="space-y-2">
-                <h4 className={`font-semibold ${isDark ? "text-slate-200" : "text-slate-800"}`}>
-                  What is Markdown Barron?
-                </h4>
-                <p className="leading-relaxed">
-                  Markdown Barron is a free, web-based Markdown previewer and live editor that translates raw Markdown code into rendered HTML, diagrams, and math equations instantly in real-time.
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <h4 className={`font-semibold ${isDark ? "text-slate-200" : "text-slate-800"}`}>
-                  Is my document data saved on external servers?
-                </h4>
-                <p className="leading-relaxed">
-                  No. All parsing, rendering, and auto-saving occurs 100% locally inside your web browser. URL sharing uses LZ compressed hash links without storing any text on server databases.
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <h4 className={`font-semibold ${isDark ? "text-slate-200" : "text-slate-800"}`}>
-                  How do I embed Mermaid diagrams or KaTeX math?
-                </h4>
-                <p className="leading-relaxed">
-                  Use standard code fences like <code className="text-xs px-1 py-0.5 rounded bg-slate-800">```mermaid</code> for diagrams, or enclose math formulas in single <code className="text-xs px-1 py-0.5 rounded bg-slate-800">$inline$</code> or double <code className="text-xs px-1 py-0.5 rounded bg-slate-800">$$block$$</code> dollar signs.
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <h4 className={`font-semibold ${isDark ? "text-slate-200" : "text-slate-800"}`}>
-                  Can I export my Markdown to HTML?
-                </h4>
-                <p className="leading-relaxed">
-                  Yes! You can download fully self-contained HTML files complete with custom light or dark stylesheets, ready for publishing or sharing offline.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="border-t border-slate-800/50 pt-6 flex flex-col md:flex-row items-center justify-between text-xs text-slate-500 gap-4">
-            <p>© {new Date().getFullYear()} Markdown Barron. Free & Open-source Online Markdown Editor.</p>
-            <div className="flex items-center gap-4">
-              <Link href="/api-docs" className="hover:text-cyan-400 transition-colors">API & Developer Documentation</Link>
-              <span>•</span>
-              <Link href="/sitemap.xml" className="hover:text-cyan-400 transition-colors">Sitemap</Link>
-            </div>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }
