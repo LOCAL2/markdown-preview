@@ -706,24 +706,20 @@ ${previewRef.current.innerHTML}
     const trimmed = text.trim();
     if (!trimmed) return 0;
 
-    // Use Intl.Segmenter if supported by browser for accurate Thai & CJK word segmentation
+    // Use Intl.Segmenter with "th-TH" locale for accurate Thai word segmentation
     if (typeof Intl !== "undefined" && (Intl as any).Segmenter) {
       try {
-        const segmenter = new (Intl as any).Segmenter(["th", "en"], { granularity: "word" });
+        const segmenter = new (Intl as any).Segmenter("th-TH", { granularity: "word" });
         const segments = Array.from(segmenter.segment(trimmed));
-        return segments.filter((s: any) => s.isWordLike).length;
+        return segments.filter((s: any) => s.isWordLike && s.segment.trim().length > 0).length;
       } catch (e) {
         // Fallback if segmenter fails
       }
     }
 
-    // Fallback regex regex word matching
-    const thaiWords = trimmed.match(/[\u0e00-\u0e7f]+/g) || [];
-    const englishWords = trimmed.replace(/[\u0e00-\u0e7f]+/g, " ").trim().split(/\s+/).filter(Boolean);
-    
-    // Thai character length approximation (approx 4 chars per Thai word if unsegmented)
-    const thaiWordEstimate = thaiWords.join("").length > 0 ? Math.ceil(thaiWords.join("").length / 4) : 0;
-    return englishWords.length + thaiWordEstimate;
+    // Fallback word matching
+    const matches = trimmed.match(/[\u0e00-\u0e7f]+|[a-zA-Z0-9']+/g);
+    return matches ? matches.length : 0;
   };
 
   // Stats calculations
