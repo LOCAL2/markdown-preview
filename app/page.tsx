@@ -701,9 +701,34 @@ ${previewRef.current.innerHTML}
     }
   };
 
+  // Accurate Multilingual Word Counter (Supports Thai without spaces & Western languages)
+  const calculateWords = (text: string): number => {
+    const trimmed = text.trim();
+    if (!trimmed) return 0;
+
+    // Use Intl.Segmenter if supported by browser for accurate Thai & CJK word segmentation
+    if (typeof Intl !== "undefined" && (Intl as any).Segmenter) {
+      try {
+        const segmenter = new (Intl as any).Segmenter(["th", "en"], { granularity: "word" });
+        const segments = Array.from(segmenter.segment(trimmed));
+        return segments.filter((s: any) => s.isWordLike).length;
+      } catch (e) {
+        // Fallback if segmenter fails
+      }
+    }
+
+    // Fallback regex regex word matching
+    const thaiWords = trimmed.match(/[\u0e00-\u0e7f]+/g) || [];
+    const englishWords = trimmed.replace(/[\u0e00-\u0e7f]+/g, " ").trim().split(/\s+/).filter(Boolean);
+    
+    // Thai character length approximation (approx 4 chars per Thai word if unsegmented)
+    const thaiWordEstimate = thaiWords.join("").length > 0 ? Math.ceil(thaiWords.join("").length / 4) : 0;
+    return englishWords.length + thaiWordEstimate;
+  };
+
   // Stats calculations
   const charCount = markdown.length;
-  const wordCount = markdown.trim() ? markdown.trim().split(/\s+/).length : 0;
+  const wordCount = calculateWords(markdown);
   const readTime = Math.ceil(wordCount / 200);
 
   return (
