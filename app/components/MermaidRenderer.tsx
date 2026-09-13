@@ -6,6 +6,22 @@ interface MermaidRendererProps {
   chart: string;
 }
 
+let mermaidInstance: any = null;
+
+async function getMermaid() {
+  if (!mermaidInstance) {
+    const mermaid = (await import("mermaid")).default;
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: "dark",
+      securityLevel: "loose",
+      fontFamily: "inherit",
+    });
+    mermaidInstance = mermaid;
+  }
+  return mermaidInstance;
+}
+
 export default function MermaidRenderer({ chart }: MermaidRendererProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [svg, setSvg] = useState<string>("");
@@ -17,14 +33,7 @@ export default function MermaidRenderer({ chart }: MermaidRendererProps) {
     async function renderChart() {
       if (!chart || !containerRef.current) return;
       try {
-        const mermaid = (await import("mermaid")).default;
-        mermaid.initialize({
-          startOnLoad: false,
-          theme: "dark",
-          securityLevel: "loose",
-          fontFamily: "inherit",
-        });
-
+        const mermaid = await getMermaid();
         const id = `mermaid-${Math.random().toString(36).substring(2, 9)}`;
         const { svg: renderedSvg } = await mermaid.render(id, chart);
 
