@@ -401,16 +401,25 @@ export default function MarkdownPreviewer() {
       }
     }, 1500);
 
-    // Undo / Redo history tracking
+    // Undo / Redo history tracking with debounced character grouping
     if (isUndoRedoAction.current) {
       isUndoRedoAction.current = false;
     } else {
-      if (history.length === 0 || history[historyIndex] !== markdown) {
-        const newHistory = history.slice(0, historyIndex + 1);
-        newHistory.push(markdown);
-        if (newHistory.length > 100) newHistory.shift();
-        setHistory(newHistory);
-        setHistoryIndex(newHistory.length - 1);
+      if (history.length === 0) {
+        setHistory([markdown]);
+        setHistoryIndex(0);
+      } else if (history[historyIndex] !== markdown) {
+        const lastEntry = history[historyIndex] || "";
+        const diffLength = Math.abs(markdown.length - lastEntry.length);
+        // Push to history on space, newline, or when typing > 5 characters
+        const isBoundaryChar = markdown.endsWith(" ") || markdown.endsWith("\n") || markdown.endsWith("\t");
+        if (isBoundaryChar || diffLength >= 5 || historyIndex === 0) {
+          const newHistory = history.slice(0, historyIndex + 1);
+          newHistory.push(markdown);
+          if (newHistory.length > 200) newHistory.shift();
+          setHistory(newHistory);
+          setHistoryIndex(newHistory.length - 1);
+        }
       }
     }
 
