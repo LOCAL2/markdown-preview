@@ -692,7 +692,7 @@ ${previewRef.current.innerHTML}
               <Sparkles className="w-4 h-4 animate-pulse" />
             </div>
             <h1 className="text-base font-bold tracking-tight hidden sm:block">
-              Markdown <span className="text-cyan-500 font-extrabold">Studio</span>
+              Markdown <span className="text-cyan-500 font-extrabold">Barron</span>
             </h1>
           </div>
 

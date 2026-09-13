@@ -1,6 +1,6 @@
-# Markdown Studio - Feature Expansion Roadmap 🚀
+# Markdown Barron - Feature Expansion Roadmap 🚀
 
-เอกสารฉบับนี้รวบรวมแนวทางและไอเดียการพัฒนาต่อยอดสำหรับโปรเจกต์ **Markdown Studio** เพื่อยกระดับให้เป็น **Production-Ready & Developer Platform** ระดับสากล
+เอกสารฉบับนี้รวบรวมแนวทางและไอเดียการพัฒนาต่อยอดสำหรับโปรเจกต์ **Markdown Barron** เพื่อยกระดับให้เป็น **Production-Ready & Developer Platform** ระดับสากล
 
 ---
 
