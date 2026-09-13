@@ -8,6 +8,7 @@ import remarkMath from "remark-math";
 import rehypeHighlight from "rehype-highlight";
 import rehypeKatex from "rehype-katex";
 import MermaidRenderer from "./components/MermaidRenderer";
+import LZString from "lz-string";
 
 import {
   Bold,
@@ -314,10 +315,15 @@ export default function MarkdownPreviewer() {
     let initialText = "";
     if (typeof window !== "undefined" && window.location.hash.startsWith("#doc=")) {
       try {
-        const rawB64 = window.location.hash.replace("#doc=", "");
-        const decoded = decodeURIComponent(atob(rawB64));
-        if (decoded) {
-          initialText = decoded;
+        const rawHash = window.location.hash.replace("#doc=", "");
+        // Try LZString compressed first
+        let decompressed = LZString.decompressFromEncodedURIComponent(rawHash);
+        if (!decompressed) {
+          // Fallback to legacy base64
+          decompressed = decodeURIComponent(atob(rawHash));
+        }
+        if (decompressed) {
+          initialText = decompressed;
         }
       } catch (err) {
         console.error("Failed to decode URL Hash doc:", err);
@@ -559,10 +565,10 @@ export default function MarkdownPreviewer() {
 
   const handleShareUrl = () => {
     try {
-      const b64 = btoa(encodeURIComponent(markdown));
-      const shareUrl = `${window.location.origin}${window.location.pathname}#doc=${b64}`;
+      const compressed = LZString.compressToEncodedURIComponent(markdown);
+      const shareUrl = `${window.location.origin}${window.location.pathname}#doc=${compressed}`;
       navigator.clipboard.writeText(shareUrl);
-      showToast("Copied shareable URL link to clipboard!");
+      showToast("Copied compressed shareable URL link to clipboard!");
     } catch (e) {
       console.error("Failed to generate share URL:", e);
       showToast("Failed to generate share URL link");
