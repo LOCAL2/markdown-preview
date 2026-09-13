@@ -1,0 +1,9 @@
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Allow: /
+
+# Host
+Host: https://markdown-preview-barron.vercel.app
+
+# Sitemaps
+Sitemap: https://markdown-preview-barron.vercel.app/sitemap.xml
