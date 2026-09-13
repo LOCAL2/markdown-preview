@@ -51,7 +51,8 @@ import {
   HelpCircle,
   FileCode,
   FileDown,
-  Layers
+  Layers,
+  Share2
 } from "lucide-react";
 
 import { SAMPLE_TEMPLATES } from "./templates";
@@ -310,13 +311,28 @@ export default function MarkdownPreviewer() {
       }
     }
 
-    const savedContent = localStorage.getItem("markdown_preview_content");
     let initialText = "";
-    if (savedContent !== null) {
-      initialText = savedContent;
-    } else {
-      initialText = SAMPLE_TEMPLATES[0].content;
+    if (typeof window !== "undefined" && window.location.hash.startsWith("#doc=")) {
+      try {
+        const rawB64 = window.location.hash.replace("#doc=", "");
+        const decoded = decodeURIComponent(atob(rawB64));
+        if (decoded) {
+          initialText = decoded;
+        }
+      } catch (err) {
+        console.error("Failed to decode URL Hash doc:", err);
+      }
     }
+
+    if (!initialText) {
+      const savedContent = localStorage.getItem("markdown_preview_content");
+      if (savedContent !== null) {
+        initialText = savedContent;
+      } else {
+        initialText = SAMPLE_TEMPLATES[0].content;
+      }
+    }
+
     setMarkdown(initialText);
     setHistory([initialText]);
     setHistoryIndex(0);
@@ -539,6 +555,18 @@ export default function MarkdownPreviewer() {
     setCopiedMd(true);
     showToast("Copied Markdown to clipboard!");
     setTimeout(() => setCopiedMd(false), 2000);
+  };
+
+  const handleShareUrl = () => {
+    try {
+      const b64 = btoa(encodeURIComponent(markdown));
+      const shareUrl = `${window.location.origin}${window.location.pathname}#doc=${b64}`;
+      navigator.clipboard.writeText(shareUrl);
+      showToast("Copied shareable URL link to clipboard!");
+    } catch (e) {
+      console.error("Failed to generate share URL:", e);
+      showToast("Failed to generate share URL link");
+    }
   };
 
   const handleCopyHtml = () => {
@@ -781,6 +809,20 @@ ${previewRef.current.innerHTML}
             <FileCode className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">API Docs</span>
           </Link>
+
+          {/* Share URL Link Button */}
+          <button
+            onClick={handleShareUrl}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg transition-all border ${
+              isDark
+                ? "bg-amber-500/10 border-amber-500/30 text-amber-300 hover:bg-amber-500/20"
+                : "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100"
+            }`}
+            title="Copy shareable URL link with document content encoded"
+          >
+            <Share2 className="w-3.5 h-3.5 text-amber-400" />
+            <span className="hidden sm:inline">Share URL</span>
+          </button>
 
 
 
