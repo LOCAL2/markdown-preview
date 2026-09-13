@@ -56,7 +56,17 @@
 
 ---
 
-### 📌 สรุป 3 จุดขายหลักที่โดดเด่นและทำได้จริงทันทีโดยไม่ต้องพึ่ง AI API:
-1. **มีโหมด Presentation Slideshow + Interactive Chart.js เจเนอเรตกราฟจากตาราง**
-2. **มีระบบ Export หน้าพรีวิวเป็น Social Media Image Card สวยๆ ในคลิกเดียว**
-3. **มี Zen Focus Mode + Soundscapes (เสียงพิมพ์ดีด/เสียงฝน) สร้างบรรยากาศการเขียน**
+## 🔗 5. Instant URL Sharing & Live Collaboration (การแชร์ลิงก์และดูร่วมกัน)
+
+* 🌐 **URL Hash-Encoded Share Link (No Backend Required)**
+  * บีบอัดข้อความ Markdown ฝังลงใน URL Hash (`#doc=...`) ด้วย LZ-String / Base64 คัดลอกลิงก์แชร์ให้เพื่อนเปิดดูหน้าพรีวิวได้ทันทีโดยไม่ต้องพึ่งพาเซิร์ฟเวอร์หรือฐานข้อมูล
+* 🚀 **One-Click Share Snapshot (`/s/[id]`)**
+  * สร้างลิงก์แชร์เอกสารฉบับสั้น (Short URL) สำหรับส่งให้ผู้อื่นอ่านพรีวิว พร้อมตัวเลือกกำหนดรหัสผ่านหรือล็อกอ่านอย่างเดียว (Read-Only Mode)
+
+---
+
+### 📌 สรุป 4 จุดขายหลักที่โดดเด่นและทำได้จริงทันทีโดยไม่ต้องพึ่ง AI API:
+1. **มีระบบแชร์ลิงก์ URL Hash ฝังเนื้อหาเอกสารไว้ในลิงก์ เปิดอ่านได้ทันที**
+2. **มีโหมด Presentation Slideshow + Interactive Chart.js เจเนอเรตกราฟจากตาราง**
+3. **มีระบบ Export หน้าพรีวิวเป็น Social Media Image Card สวยๆ ในคลิกเดียว**
+4. **มี Zen Focus Mode + Soundscapes (เสียงพิมพ์ดีด/เสียงฝน) สร้างบรรยากาศการเขียน**
