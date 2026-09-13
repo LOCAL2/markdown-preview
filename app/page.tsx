@@ -313,17 +313,26 @@ export default function MarkdownPreviewer() {
     }
 
     let initialText = "";
-    if (typeof window !== "undefined" && window.location.hash.startsWith("#doc=")) {
+    if (typeof window !== "undefined" && window.location.hash.includes("doc=")) {
       try {
-        const rawHash = window.location.hash.replace("#doc=", "");
-        // Try LZString compressed first
-        let decompressed = LZString.decompressFromEncodedURIComponent(rawHash);
-        if (!decompressed) {
-          // Fallback to legacy base64
-          decompressed = decodeURIComponent(atob(rawHash));
-        }
-        if (decompressed) {
-          initialText = decompressed;
+        const hashStr = window.location.hash;
+        const match = hashStr.match(/#?doc=([^&]+)/);
+        if (match && match[1]) {
+          const rawHash = match[1];
+          let decompressed = LZString.decompressFromEncodedURIComponent(rawHash);
+          if (!decompressed) {
+            decompressed = LZString.decompressFromBase64(rawHash);
+          }
+          if (!decompressed) {
+            try {
+              decompressed = decodeURIComponent(atob(rawHash));
+            } catch (e) {
+              // ignore
+            }
+          }
+          if (decompressed) {
+            initialText = decompressed;
+          }
         }
       } catch (err) {
         console.error("Failed to decode URL Hash doc:", err);
